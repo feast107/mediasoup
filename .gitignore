@@ -34,5 +34,6 @@
 ## Others.
 /coverage
 /.cache
+/.idea
 # Packaged module.
 *.tgz
