@@ -38,7 +38,7 @@ inline static void onWrite(uv_write_t* req, int status)
 	auto* writeData  = static_cast<TcpConnectionHandle::UvWriteData*>(req->data);
 	auto* handle     = req->handle;
 	auto* connection = static_cast<TcpConnectionHandle*>(handle->data);
-	auto* cb         = writeData->cb;
+	const auto* cb   = writeData->cb;
 
 	if (connection)
 	{
@@ -74,11 +74,11 @@ inline static void onShutdown(uv_shutdown_t* req, int /*status*/)
 /* Instance methods. */
 
 // NOLINTNEXTLINE(cppcoreguidelines-pro-type-member-init)
-TcpConnectionHandle::TcpConnectionHandle(size_t bufferSize) : bufferSize(bufferSize)
+TcpConnectionHandle::TcpConnectionHandle(size_t bufferSize)
+  : bufferSize(bufferSize), uvHandle(new uv_tcp_t)
 {
 	MS_TRACE();
 
-	this->uvHandle       = new uv_tcp_t;
 	this->uvHandle->data = static_cast<void*>(this);
 
 	// NOTE: Don't allocate the buffer here. Instead wait for the first uv_alloc_cb().
@@ -187,6 +187,7 @@ void TcpConnectionHandle::Start()
 		return;
 	}
 
+	// NOLINTNEXTLINE(misc-const-correctness)
 	int err = uv_read_start(
 	  reinterpret_cast<uv_stream_t*>(this->uvHandle),
 	  static_cast<uv_alloc_cb>(onAlloc),
@@ -265,16 +266,17 @@ void TcpConnectionHandle::Write(
 
 		return;
 	}
-#endif
 
 write_libuv:
+#endif
+
+	// First try uv_try_write(). In case it can not directly write all the given
+	// data then build a uv_req_t and use uv_write().
+
 	const size_t totalLen = len1 + len2;
 	uv_buf_t buffers[2];
 	int written{ 0 };
 	int err;
-
-	// First try uv_try_write(). In case it can not directly write all the given
-	// data then build a uv_req_t and use uv_write().
 
 	buffers[0] = uv_buf_init(reinterpret_cast<char*>(const_cast<uint8_t*>(data1)), len1);
 	buffers[1] = uv_buf_init(reinterpret_cast<char*>(const_cast<uint8_t*>(data2)), len2);

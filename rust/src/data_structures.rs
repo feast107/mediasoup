@@ -3,7 +3,9 @@
 #[cfg(test)]
 mod tests;
 
-use mediasoup_sys::fbs::{common, rtp_packet, sctp_association, transport, web_rtc_transport};
+use mediasoup_sys::fbs::{
+    common, producer, rtp_packet, sctp_association, transport, web_rtc_transport,
+};
 use serde::de::{MapAccess, Visitor};
 use serde::ser::SerializeStruct;
 use serde::{de, Deserialize, Deserializer, Serialize, Serializer};
@@ -45,7 +47,7 @@ impl AppData {
     }
 }
 
-/// Listening protocol, IP and port for [`WebRtcServer`] to listen on.
+/// Listening protocol, IP and port for [`WebRtcServer`](crate::webrtc_server::WebRtcServer) to listen on.
 ///
 /// # Notes on usage
 /// If you use "0.0.0.0" or "::" as ip value, then you need to also provide `announced_ip`.
@@ -62,6 +64,9 @@ pub struct ListenInfo {
     /// Listening port.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub port: Option<u16>,
+    /// Socket flags.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub flags: Option<SocketFlags>,
     /// Send buffer size (bytes).
     #[serde(skip_serializing_if = "Option::is_none")]
     pub send_buffer_size: Option<u32>,
@@ -80,8 +85,33 @@ impl ListenInfo {
             ip: self.ip.to_string(),
             announced_ip: self.announced_ip.map(|ip| ip.to_string()),
             port: self.port.unwrap_or(0),
+            flags: Box::new(self.flags.unwrap_or_default().to_fbs()),
             send_buffer_size: self.send_buffer_size.unwrap_or(0),
             recv_buffer_size: self.recv_buffer_size.unwrap_or(0),
+        }
+    }
+}
+
+/// UDP/TCP socket flags.
+#[derive(
+    Default, Debug, Copy, Clone, Ord, PartialOrd, Eq, PartialEq, Hash, Deserialize, Serialize,
+)]
+#[serde(rename_all = "camelCase")]
+pub struct SocketFlags {
+    /// Disable dual-stack support so only IPv6 is used (only if ip is IPv6).
+    /// Defaults to false.
+    pub ipv6_only: bool,
+    /// Make different transports bind to the same ip and port (only for UDP).
+    /// Useful for multicast scenarios with plain transport. Use with caution.
+    /// Defaults to false.
+    pub udp_reuse_port: bool,
+}
+
+impl SocketFlags {
+    pub(crate) fn to_fbs(self) -> transport::SocketFlags {
+        transport::SocketFlags {
+            ipv6_only: self.ipv6_only,
+            udp_reuse_port: self.udp_reuse_port,
         }
     }
 }
@@ -1047,7 +1077,7 @@ impl TraceEventDirection {
 #[derive(Debug, Clone)]
 pub enum WebRtcMessage<'a> {
     /// String
-    String(String),
+    String(Cow<'a, [u8]>),
     /// Binary
     Binary(Cow<'a, [u8]>),
     /// EmptyString
@@ -1070,9 +1100,7 @@ impl<'a> WebRtcMessage<'a> {
 
     pub(crate) fn new(ppid: u32, payload: Cow<'a, [u8]>) -> Result<Self, u32> {
         match ppid {
-            51 => Ok(WebRtcMessage::String(
-                String::from_utf8(payload.to_vec()).unwrap(),
-            )),
+            51 => Ok(WebRtcMessage::String(payload)),
             53 => Ok(WebRtcMessage::Binary(payload)),
             56 => Ok(WebRtcMessage::EmptyString),
             57 => Ok(WebRtcMessage::EmptyBinary),
@@ -1082,9 +1110,9 @@ impl<'a> WebRtcMessage<'a> {
 
     pub(crate) fn into_ppid_and_payload(self) -> (u32, Cow<'a, [u8]>) {
         match self {
-            WebRtcMessage::String(string) => (51_u32, Cow::from(string.into_bytes())),
+            WebRtcMessage::String(binary) => (51_u32, binary),
             WebRtcMessage::Binary(binary) => (53_u32, binary),
-            WebRtcMessage::EmptyString => (56_u32, Cow::from(b" ".as_ref())),
+            WebRtcMessage::EmptyString => (56_u32, Cow::from(vec![0_u8])),
             WebRtcMessage::EmptyBinary => (57_u32, Cow::from(vec![0_u8])),
         }
     }
@@ -1092,7 +1120,7 @@ impl<'a> WebRtcMessage<'a> {
     /// Convert to owned message
     pub fn into_owned(self) -> OwnedWebRtcMessage {
         match self {
-            WebRtcMessage::String(string) => OwnedWebRtcMessage::String(string),
+            WebRtcMessage::String(binary) => OwnedWebRtcMessage::String(binary.into_owned()),
             WebRtcMessage::Binary(binary) => OwnedWebRtcMessage::Binary(binary.into_owned()),
             WebRtcMessage::EmptyString => OwnedWebRtcMessage::EmptyString,
             WebRtcMessage::EmptyBinary => OwnedWebRtcMessage::EmptyBinary,
@@ -1105,7 +1133,7 @@ impl<'a> WebRtcMessage<'a> {
 #[derive(Debug, Clone)]
 pub enum OwnedWebRtcMessage {
     /// String
-    String(String),
+    String(Vec<u8>),
     /// Binary
     Binary(Vec<u8>),
     /// EmptyString
@@ -1233,6 +1261,37 @@ impl BweTraceInfo {
             start_bitrate: info.start_bitrate,
             max_padding_bitrate: info.max_padding_bitrate,
             available_bitrate: info.available_bitrate,
+        }
+    }
+}
+
+/// RTCP Sender Report info in trace event.
+#[derive(Debug, Copy, Clone, Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SrTraceInfo {
+    /// Stream SSRC
+    ssrc: u32,
+    /// NTP : most significant word
+    ntp_sec: u32,
+    /// NTP : least significant word
+    ntp_frac: u32,
+    /// RTP timestamp
+    rtp_ts: u32,
+    /// Sender packet count
+    packet_count: u32,
+    /// Sender octet count
+    octet_count: u32,
+}
+
+impl SrTraceInfo {
+    pub(crate) fn from_fbs(info: producer::SrTraceInfo) -> Self {
+        Self {
+            ssrc: info.ssrc,
+            ntp_sec: info.ntp_sec,
+            ntp_frac: info.ntp_frac,
+            rtp_ts: info.rtp_ts,
+            packet_count: info.packet_count,
+            octet_count: info.octet_count,
         }
     }
 }

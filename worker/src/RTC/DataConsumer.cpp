@@ -5,9 +5,7 @@
 #include "DepLibUV.hpp"
 #include "Logger.hpp"
 #include "MediaSoupErrors.hpp"
-#include "Utils.hpp"
 #include "RTC/SctpAssociation.hpp"
-#include <stdexcept>
 
 namespace RTC
 {
@@ -280,7 +278,7 @@ namespace RTC
 
 				const auto* body    = request->data->body_as<FBS::DataConsumer::SendRequest>();
 				const uint8_t* data = body->data()->Data();
-				size_t len          = body->data()->size();
+				const size_t len    = body->data()->size();
 
 				if (len > this->maxMessageSize)
 				{
@@ -303,9 +301,9 @@ namespace RTC
 					  }
 				  });
 
-				static std::vector<uint16_t> EmptySubchannels;
+				static std::vector<uint16_t> emptySubchannels;
 
-				SendMessage(data, len, body->ppid(), EmptySubchannels, std::nullopt, cb);
+				SendMessage(data, len, body->ppid(), emptySubchannels, std::nullopt, cb);
 
 				break;
 			}
@@ -335,6 +333,54 @@ namespace RTC
 				  request->GetBufferBuilder(), std::addressof(subchannels));
 
 				request->Accept(FBS::Response::Body::DataConsumer_SetSubchannelsResponse, responseOffset);
+
+				break;
+			}
+
+			case Channel::ChannelRequest::Method::DATACONSUMER_ADD_SUBCHANNEL:
+			{
+				const auto* body = request->data->body_as<FBS::DataConsumer::AddSubchannelRequest>();
+
+				this->subchannels.insert(body->subchannel());
+
+				std::vector<uint16_t> subchannels;
+
+				subchannels.reserve(this->subchannels.size());
+
+				for (auto subchannel : this->subchannels)
+				{
+					subchannels.emplace_back(subchannel);
+				}
+
+				// Create response.
+				auto responseOffset = FBS::DataConsumer::CreateAddSubchannelResponseDirect(
+				  request->GetBufferBuilder(), std::addressof(subchannels));
+
+				request->Accept(FBS::Response::Body::DataConsumer_AddSubchannelResponse, responseOffset);
+
+				break;
+			}
+
+			case Channel::ChannelRequest::Method::DATACONSUMER_REMOVE_SUBCHANNEL:
+			{
+				const auto* body = request->data->body_as<FBS::DataConsumer::RemoveSubchannelRequest>();
+
+				this->subchannels.erase(body->subchannel());
+
+				std::vector<uint16_t> subchannels;
+
+				subchannels.reserve(this->subchannels.size());
+
+				for (auto subchannel : this->subchannels)
+				{
+					subchannels.emplace_back(subchannel);
+				}
+
+				// Create response.
+				auto responseOffset = FBS::DataConsumer::CreateRemoveSubchannelResponseDirect(
+				  request->GetBufferBuilder(), std::addressof(subchannels));
+
+				request->Accept(FBS::Response::Body::DataConsumer_RemoveSubchannelResponse, responseOffset);
 
 				break;
 			}
@@ -495,7 +541,7 @@ namespace RTC
 
 		// If subchannels are given, verify that this data consumer is subscribed
 		// to at least one of them.
-		if (subchannels.size() > 0)
+		if (!subchannels.empty())
 		{
 			bool subchannelMatched{ false };
 

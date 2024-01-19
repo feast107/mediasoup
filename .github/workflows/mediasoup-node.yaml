@@ -1,6 +1,6 @@
 name: mediasoup-node
 
-on: [push, pull_request]
+on: [pull_request, workflow_dispatch]
 
 concurrency:
   # Cancel a currently running workflow from the same PR, branch or tag when a
@@ -28,13 +28,14 @@ jobs:
 
     env:
       MEDIASOUP_SKIP_WORKER_PREBUILT_DOWNLOAD: 'true'
+      MEDIASOUP_LOCAL_DEV: 'true'
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.ci.node }}
 
@@ -47,10 +48,9 @@ jobs:
           restore-keys: |
             ${{ matrix.ci.os }}-node-
 
-      # NOTE: Add --force since otherwise `npm ci` fails in Node 16 because
-      # @octokit/auth-token dev dependency requires Node >= 16.
+      # NOTE: Add --force since some dev dependencies require Node >= 18.
       - name: npm ci
-        run: npm ci --force
+        run: npm ci --force --foreground-scripts
 
       - name: npm run lint:node
         run: npm run lint:node

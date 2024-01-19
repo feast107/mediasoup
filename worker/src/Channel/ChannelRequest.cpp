@@ -75,6 +75,8 @@ namespace Channel
 		{ FBS::Request::Method::DATACONSUMER_SET_BUFFERED_AMOUNT_LOW_THRESHOLD, "dataConsumer.setBufferedAmountLowThreshold" },
 		{ FBS::Request::Method::DATACONSUMER_SEND,                              "dataConsumer.send"                          },
 		{ FBS::Request::Method::DATACONSUMER_SET_SUBCHANNELS,                   "dataConsumer.setSubchannels"                },
+		{ FBS::Request::Method::DATACONSUMER_ADD_SUBCHANNEL,                    "dataConsumer.addSubchannel"                 },
+		{ FBS::Request::Method::DATACONSUMER_REMOVE_SUBCHANNEL,                 "dataConsumer.removeSubchannel"              },
 		{ FBS::Request::Method::RTPOBSERVER_PAUSE,                              "rtpObserver.pause"                          },
 		{ FBS::Request::Method::RTPOBSERVER_RESUME,                             "rtpObserver.resume"                         },
 		{ FBS::Request::Method::RTPOBSERVER_ADD_PRODUCER,                       "rtpObserver.addProducer"                    },
@@ -154,7 +156,7 @@ namespace Channel
 		this->SendResponse(response);
 	}
 
-	void ChannelRequest::Send(uint8_t* buffer, size_t size)
+	void ChannelRequest::Send(uint8_t* buffer, size_t size) const
 	{
 		this->channel->Send(buffer, size);
 	}

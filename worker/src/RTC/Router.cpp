@@ -7,7 +7,6 @@
 #endif
 #include "Logger.hpp"
 #include "MediaSoupErrors.hpp"
-#include "Utils.hpp"
 #include "RTC/ActiveSpeakerObserver.hpp"
 #include "RTC/AudioLevelObserver.hpp"
 #include "RTC/DirectTransport.hpp"
@@ -652,7 +651,9 @@ namespace RTC
 	{
 		MS_TRACE();
 
+#ifdef MS_RTC_LOGGER_RTP
 		packet->logger.routerId = this->id;
+#endif
 
 		auto& consumers = this->mapProducerConsumers.at(producer);
 
@@ -921,9 +922,24 @@ namespace RTC
 
 		auto& dataConsumers = this->mapDataProducerDataConsumers.at(dataProducer);
 
-		for (auto* dataConsumer : dataConsumers)
+		if (!dataConsumers.empty())
 		{
-			dataConsumer->SendMessage(msg, len, ppid, subchannels, requiredSubchannel);
+#ifdef MS_LIBURING_SUPPORTED
+			// Activate liburing usage.
+			// The effective sending could be synchronous, thus we would send those
+			// messages within a single system call.
+			DepLibUring::SetActive();
+#endif
+
+			for (auto* dataConsumer : dataConsumers)
+			{
+				dataConsumer->SendMessage(msg, len, ppid, subchannels, requiredSubchannel);
+			}
+
+#ifdef MS_LIBURING_SUPPORTED
+			// Submit all prepared submission entries.
+			DepLibUring::Submit();
+#endif
 		}
 	}
 

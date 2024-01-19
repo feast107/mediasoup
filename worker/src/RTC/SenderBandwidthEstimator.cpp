@@ -4,7 +4,6 @@
 #include "RTC/SenderBandwidthEstimator.hpp"
 #include "DepLibUV.hpp"
 #include "Logger.hpp"
-#include <limits>
 
 namespace RTC
 {
@@ -47,7 +46,7 @@ namespace RTC
 		this->cummulativeResult.Reset();
 	}
 
-	void SenderBandwidthEstimator::RtpPacketSent(SentInfo& sentInfo)
+	void SenderBandwidthEstimator::RtpPacketSent(const SentInfo& sentInfo)
 	{
 		MS_TRACE();
 

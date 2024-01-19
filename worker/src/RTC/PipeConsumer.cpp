@@ -1,12 +1,10 @@
-#include "FBS/consumer.h"
 #define MS_CLASS "RTC::PipeConsumer"
 // #define MS_LOG_DEV_LEVEL 3
 
-#include "DepLibUV.hpp"
+#include "RTC/PipeConsumer.hpp"
 #include "Logger.hpp"
 #include "MediaSoupErrors.hpp"
 #include "RTC/Codecs/Tools.hpp"
-#include "RTC/PipeConsumer.hpp"
 
 namespace RTC
 {
@@ -219,11 +217,15 @@ namespace RTC
 	{
 		MS_TRACE();
 
+#ifdef MS_RTC_LOGGER_RTP
 		packet->logger.consumerId = this->id;
+#endif
 
 		if (!IsActive())
 		{
+#ifdef MS_RTC_LOGGER_RTP
 			packet->logger.Dropped(RtcLogger::RtpPacket::DropReason::CONSUMER_INACTIVE);
+#endif
 
 			return;
 		}
@@ -236,7 +238,9 @@ namespace RTC
 		{
 			MS_DEBUG_DEV("payload type not supported [payloadType:%" PRIu8 "]", payloadType);
 
+#ifdef MS_RTC_LOGGER_RTP
 			packet->logger.Dropped(RtcLogger::RtpPacket::DropReason::UNSUPPORTED_PAYLOAD_TYPE);
+#endif
 
 			return;
 		}
@@ -250,7 +254,9 @@ namespace RTC
 		// the packet.
 		if (syncRequired && this->keyFrameSupported && !packet->IsKeyFrame())
 		{
+#ifdef MS_RTC_LOGGER_RTP
 			packet->logger.Dropped(RtcLogger::RtpPacket::DropReason::NOT_A_KEYFRAME);
+#endif
 
 			return;
 		}
@@ -284,8 +290,10 @@ namespace RTC
 		packet->SetSsrc(ssrc);
 		packet->SetSequenceNumber(seq);
 
+#ifdef MS_RTC_LOGGER_RTP
 		packet->logger.sendRtpTimestamp = packet->GetTimestamp();
 		packet->logger.sendSeqNumber    = seq;
+#endif
 
 		if (isSyncPacket)
 		{

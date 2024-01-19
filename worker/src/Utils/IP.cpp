@@ -17,7 +17,7 @@ namespace Utils
 			return AF_UNSPEC;
 		}
 
-		auto ipPtr                      = ip.c_str();
+		const auto* ipPtr               = ip.c_str();
 		char ipBuffer[INET6_ADDRSTRLEN] = { 0 };
 
 		if (uv_inet_pton(AF_INET, ipPtr, ipBuffer) == 0)
@@ -91,11 +91,34 @@ namespace Utils
 		ip.assign(ipBuffer);
 	}
 
+	size_t IP::GetAddressLen(const struct sockaddr* addr)
+	{
+		MS_TRACE();
+
+		switch (addr->sa_family)
+		{
+			case AF_INET:
+			{
+				return sizeof(struct sockaddr_in);
+			}
+
+			case AF_INET6:
+			{
+				return sizeof(struct sockaddr_in6);
+			}
+
+			default:
+			{
+				MS_ABORT("unknown network family: %d", static_cast<int>(addr->sa_family));
+			}
+		}
+	}
+
 	void IP::NormalizeIp(std::string& ip)
 	{
 		MS_TRACE();
 
-		sockaddr_storage addrStorage;
+		sockaddr_storage addrStorage{};
 		char ipBuffer[INET6_ADDRSTRLEN] = { 0 };
 		int err;
 

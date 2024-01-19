@@ -43,7 +43,7 @@ inline static void onSend(uv_udp_send_t* req, int status)
 	auto* sendData = static_cast<UdpSocketHandle::UvSendData*>(req->data);
 	auto* handle   = req->handle;
 	auto* socket   = static_cast<UdpSocketHandle*>(handle->data);
-	auto* cb       = sendData->cb;
+	const auto* cb = sendData->cb;
 
 	if (socket)
 	{
@@ -66,11 +66,10 @@ UdpSocketHandle::UdpSocketHandle(uv_udp_t* uvHandle) : uvHandle(uvHandle)
 {
 	MS_TRACE();
 
-	int err;
-
 	this->uvHandle->data = static_cast<void*>(this);
 
-	err = uv_udp_recv_start(
+	// NOLINTNEXTLINE(misc-const-correctness)
+	int err = uv_udp_recv_start(
 	  this->uvHandle, static_cast<uv_alloc_cb>(onAlloc), static_cast<uv_udp_recv_cb>(onRecv));
 
 	if (err != 0)
@@ -190,9 +189,10 @@ void UdpSocketHandle::Send(
 
 		return;
 	}
-#endif
 
 send_libuv:
+#endif
+
 	// First try uv_udp_try_send(). In case it can not directly send the datagram
 	// then build a uv_req_t and use uv_udp_send().
 
@@ -242,7 +242,7 @@ send_libuv:
 
 	buffer = uv_buf_init(reinterpret_cast<char*>(sendData->store), len);
 
-	int err = uv_udp_send(
+	const int err = uv_udp_send(
 	  &sendData->req, this->uvHandle, &buffer, 1, addr, static_cast<uv_udp_send_cb>(onSend));
 
 	if (err != 0)
@@ -271,7 +271,8 @@ uint32_t UdpSocketHandle::GetSendBufferSize() const
 	MS_TRACE();
 
 	int size{ 0 };
-	int err = uv_send_buffer_size(reinterpret_cast<uv_handle_t*>(this->uvHandle), std::addressof(size));
+	const int err =
+	  uv_send_buffer_size(reinterpret_cast<uv_handle_t*>(this->uvHandle), std::addressof(size));
 
 	if (err)
 	{
@@ -285,15 +286,15 @@ void UdpSocketHandle::SetSendBufferSize(uint32_t size)
 {
 	MS_TRACE();
 
-	auto size_int = static_cast<int>(size);
+	auto sizeInt = static_cast<int>(size);
 
-	if (size_int <= 0)
+	if (sizeInt <= 0)
 	{
-		MS_THROW_TYPE_ERROR("invalid size: %d", size_int);
+		MS_THROW_TYPE_ERROR("invalid size: %d", sizeInt);
 	}
 
-	int err =
-	  uv_send_buffer_size(reinterpret_cast<uv_handle_t*>(this->uvHandle), std::addressof(size_int));
+	const int err =
+	  uv_send_buffer_size(reinterpret_cast<uv_handle_t*>(this->uvHandle), std::addressof(sizeInt));
 
 	if (err)
 	{
@@ -306,7 +307,8 @@ uint32_t UdpSocketHandle::GetRecvBufferSize() const
 	MS_TRACE();
 
 	int size{ 0 };
-	int err = uv_recv_buffer_size(reinterpret_cast<uv_handle_t*>(this->uvHandle), std::addressof(size));
+	const int err =
+	  uv_recv_buffer_size(reinterpret_cast<uv_handle_t*>(this->uvHandle), std::addressof(size));
 
 	if (err)
 	{
@@ -320,15 +322,15 @@ void UdpSocketHandle::SetRecvBufferSize(uint32_t size)
 {
 	MS_TRACE();
 
-	auto size_int = static_cast<int>(size);
+	auto sizeInt = static_cast<int>(size);
 
-	if (size_int <= 0)
+	if (sizeInt <= 0)
 	{
-		MS_THROW_TYPE_ERROR("invalid size: %d", size_int);
+		MS_THROW_TYPE_ERROR("invalid size: %d", sizeInt);
 	}
 
-	int err =
-	  uv_recv_buffer_size(reinterpret_cast<uv_handle_t*>(this->uvHandle), std::addressof(size_int));
+	const int err =
+	  uv_recv_buffer_size(reinterpret_cast<uv_handle_t*>(this->uvHandle), std::addressof(sizeInt));
 
 	if (err)
 	{
@@ -361,6 +363,7 @@ bool UdpSocketHandle::SetLocalAddress()
 	return true;
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 inline void UdpSocketHandle::OnUvRecvAlloc(size_t /*suggestedSize*/, uv_buf_t* buf)
 {
 	MS_TRACE();
@@ -406,6 +409,7 @@ inline void UdpSocketHandle::OnUvRecv(
 	}
 }
 
+// NOLINTNEXTLINE(readability-convert-member-functions-to-static)
 inline void UdpSocketHandle::OnUvSend(int status, UdpSocketHandle::onSendCallback* cb)
 {
 	MS_TRACE();
