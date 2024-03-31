@@ -1,8 +1,43 @@
 # Changelog
 
-### NEXT
+### 3.13.24
 
-- C++: Update libsrtp to v3.0-alpha.
+- Node: Fix missing `bitrateByLayer` field in stats of `RtpRecvStream` in Node ([PR #1349](https://github.com/versatica/mediasoup/pull/1349)).
+- Update worker dependency libuv to 1.48.0.
+- Update worker FlatBuffers to 24.3.6-1 (fix cannot set temporal layer 0) ([PR #1348](https://github.com/versatica/mediasoup/pull/1348)).
+
+### 3.13.23
+
+- Fix DTLS packets do not honor configured DTLS MTU (attempt 3) ([PR #1345](https://github.com/versatica/mediasoup/pull/1345)).
+
+### 3.13.22
+
+- Fix wrong publication of mediasoup NPM 3.13.21.
+
+### 3.13.21
+
+- Revert ([PR #1156](https://github.com/versatica/mediasoup/pull/1156)) "Make DTLS fragment stay within MTU size range" because it causes a memory leak ([PR #1342](https://github.com/versatica/mediasoup/pull/1342)).
+
+### 3.13.20
+
+- Add server side ICE consent checks to detect silent WebRTC disconnections ([PR #1332](https://github.com/versatica/mediasoup/pull/1332)).
+- Fix regression (crash) in transport-cc feedback generation ([PR #1339](https://github.com/versatica/mediasoup/pull/1339)).
+
+### 3.13.19
+
+- Node: Fix `router.createWebRtcTransport()` with `listenIps` ([PR #1330](https://github.com/versatica/mediasoup/pull/1330)).
+
+### 3.13.18
+
+- Make transport-cc feedback work similarly to libwebrtc ([PR #1088](https://github.com/versatica/mediasoup/pull/1088) by @penguinol).
+- `TransportListenInfo`: "announced ip" can also be a hostname ([PR #1322](https://github.com/versatica/mediasoup/pull/1322)).
+- `TransportListenInfo`: Rename "announced ip" to "announced address" ([PR #1324](https://github.com/versatica/mediasoup/pull/1324)).
+- CI: Add `macos-14`.
+
+### 3.13.17
+
+- Fix prebuilt worker download ([PR #1319](https://github.com/versatica/mediasoup/pull/1319) by @brynrichards).
+- libsrtp: Update to v3.0-alpha version in our fork.
 
 ### 3.13.16
 
@@ -89,7 +124,7 @@
 
 ### 3.13.0
 
-- Switch from JSON based messages to `flatbuffers` ([PR #1064](https://github.com/versatica/mediasoup/pull/1064)).
+- Switch from JSON based messages to FlatBuffers ([PR #1064](https://github.com/versatica/mediasoup/pull/1064)).
 - Add `ListenInfo` in all transports and send/recv buffer size options ([PR #1084](https://github.com/versatica/mediasoup/pull/1084)).
 - Add optional `rtcpListenInfo` in `PlainTransportOptions` ([PR #1099](https://github.com/versatica/mediasoup/pull/1099)).
 - Add pause/resume API in `DataProducer` and `DataConsumer` ([PR #1104](https://github.com/versatica/mediasoup/pull/1104)).

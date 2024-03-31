@@ -106,7 +106,9 @@ pub struct PipeTransportDump {
 }
 
 impl PipeTransportDump {
-    pub(crate) fn from_fbs(dump: pipe_transport::DumpResponse) -> Result<Self, Box<dyn Error>> {
+    pub(crate) fn from_fbs(
+        dump: pipe_transport::DumpResponse,
+    ) -> Result<Self, Box<dyn Error + Send + Sync>> {
         Ok(Self {
             // Common to all Transports.
             id: dump.base.id.parse()?,
@@ -116,37 +118,37 @@ impl PipeTransportDump {
                 .producer_ids
                 .iter()
                 .map(|producer_id| Ok(producer_id.parse()?))
-                .collect::<Result<_, Box<dyn Error>>>()?,
+                .collect::<Result<_, Box<dyn Error + Send + Sync>>>()?,
             consumer_ids: dump
                 .base
                 .consumer_ids
                 .iter()
                 .map(|consumer_id| Ok(consumer_id.parse()?))
-                .collect::<Result<_, Box<dyn Error>>>()?,
+                .collect::<Result<_, Box<dyn Error + Send + Sync>>>()?,
             map_ssrc_consumer_id: dump
                 .base
                 .map_ssrc_consumer_id
                 .iter()
                 .map(|key_value| Ok((key_value.key, key_value.value.parse()?)))
-                .collect::<Result<_, Box<dyn Error>>>()?,
+                .collect::<Result<_, Box<dyn Error + Send + Sync>>>()?,
             map_rtx_ssrc_consumer_id: dump
                 .base
                 .map_rtx_ssrc_consumer_id
                 .iter()
                 .map(|key_value| Ok((key_value.key, key_value.value.parse()?)))
-                .collect::<Result<_, Box<dyn Error>>>()?,
+                .collect::<Result<_, Box<dyn Error + Send + Sync>>>()?,
             data_producer_ids: dump
                 .base
                 .data_producer_ids
                 .iter()
                 .map(|data_producer_id| Ok(data_producer_id.parse()?))
-                .collect::<Result<_, Box<dyn Error>>>()?,
+                .collect::<Result<_, Box<dyn Error + Send + Sync>>>()?,
             data_consumer_ids: dump
                 .base
                 .data_consumer_ids
                 .iter()
                 .map(|data_consumer_id| Ok(data_consumer_id.parse()?))
-                .collect::<Result<_, Box<dyn Error>>>()?,
+                .collect::<Result<_, Box<dyn Error + Send + Sync>>>()?,
             recv_rtp_header_extensions: RecvRtpHeaderExtensions::from_fbs(
                 dump.base.recv_rtp_header_extensions.as_ref(),
             ),
@@ -223,7 +225,7 @@ pub struct PipeTransportStat {
 impl PipeTransportStat {
     pub(crate) fn from_fbs(
         stats: pipe_transport::GetStatsResponse,
-    ) -> Result<Self, Box<dyn Error>> {
+    ) -> Result<Self, Box<dyn Error + Send + Sync>> {
         Ok(Self {
             transport_id: stats.base.transport_id.parse()?,
             timestamp: stats.base.timestamp,
@@ -719,12 +721,12 @@ impl PipeTransport {
     ///
     /// # Notes on usage
     /// * Once the pipe transport is created, `transport.tuple()` will contain information about
-    ///   its `local_ip`, `local_port` and `protocol`.
+    ///   its `local_address`, `local_port` and `protocol`.
     /// * Information about `remote_ip` and `remote_port` will be set after calling `connect()`
     ///   method.
     #[must_use]
     pub fn tuple(&self) -> TransportTuple {
-        *self.inner.data.tuple.lock()
+        self.inner.data.tuple.lock().clone()
     }
 
     /// Local SCTP parameters. Or `None` if SCTP is not enabled.

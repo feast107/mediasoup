@@ -46,8 +46,6 @@ namespace RTC
 
 		Utils::IP::GetAddressInfo(GetLocalAddress(), family, localIp, localPort);
 
-		localIp = this->localAnnouncedIp.empty() ? localIp : this->localAnnouncedIp;
-
 		std::string remoteIp;
 		uint16_t remotePort;
 
@@ -56,7 +54,12 @@ namespace RTC
 		auto protocol = TransportTuple::ProtocolToFbs(GetProtocol());
 
 		return FBS::Transport::CreateTupleDirect(
-		  builder, localIp.c_str(), localPort, remoteIp.c_str(), remotePort, protocol);
+		  builder,
+		  (this->localAnnouncedAddress.empty() ? localIp : this->localAnnouncedAddress).c_str(),
+		  localPort,
+		  remoteIp.c_str(),
+		  remotePort,
+		  protocol);
 	}
 
 	void TransportTuple::Dump() const
@@ -71,22 +74,22 @@ namespace RTC
 
 		Utils::IP::GetAddressInfo(GetLocalAddress(), family, ip, port);
 
-		MS_DUMP("  localIp    : %s", ip.c_str());
-		MS_DUMP("  localPort  : %" PRIu16, port);
+		MS_DUMP("  localIp: %s", ip.c_str());
+		MS_DUMP("  localPort: %" PRIu16, port);
 
 		Utils::IP::GetAddressInfo(GetRemoteAddress(), family, ip, port);
 
-		MS_DUMP("  remoteIp   : %s", ip.c_str());
-		MS_DUMP("  remotePort : %" PRIu16, port);
+		MS_DUMP("  remoteIp: %s", ip.c_str());
+		MS_DUMP("  remotePort: %" PRIu16, port);
 
 		switch (GetProtocol())
 		{
 			case Protocol::UDP:
-				MS_DUMP("  protocol   : udp");
+				MS_DUMP("  protocol: udp");
 				break;
 
 			case Protocol::TCP:
-				MS_DUMP("  protocol   : tcp");
+				MS_DUMP("  protocol: tcp");
 				break;
 		}
 

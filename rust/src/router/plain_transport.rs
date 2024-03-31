@@ -127,7 +127,9 @@ pub struct PlainTransportDump {
 }
 
 impl PlainTransportDump {
-    pub(crate) fn from_fbs(dump: plain_transport::DumpResponse) -> Result<Self, Box<dyn Error>> {
+    pub(crate) fn from_fbs(
+        dump: plain_transport::DumpResponse,
+    ) -> Result<Self, Box<dyn Error + Send + Sync>> {
         Ok(Self {
             // Common to all Transports.
             id: dump.base.id.parse()?,
@@ -137,37 +139,37 @@ impl PlainTransportDump {
                 .producer_ids
                 .iter()
                 .map(|producer_id| Ok(producer_id.parse()?))
-                .collect::<Result<_, Box<dyn Error>>>()?,
+                .collect::<Result<_, Box<dyn Error + Send + Sync>>>()?,
             consumer_ids: dump
                 .base
                 .consumer_ids
                 .iter()
                 .map(|consumer_id| Ok(consumer_id.parse()?))
-                .collect::<Result<_, Box<dyn Error>>>()?,
+                .collect::<Result<_, Box<dyn Error + Send + Sync>>>()?,
             map_ssrc_consumer_id: dump
                 .base
                 .map_ssrc_consumer_id
                 .iter()
                 .map(|key_value| Ok((key_value.key, key_value.value.parse()?)))
-                .collect::<Result<_, Box<dyn Error>>>()?,
+                .collect::<Result<_, Box<dyn Error + Send + Sync>>>()?,
             map_rtx_ssrc_consumer_id: dump
                 .base
                 .map_rtx_ssrc_consumer_id
                 .iter()
                 .map(|key_value| Ok((key_value.key, key_value.value.parse()?)))
-                .collect::<Result<_, Box<dyn Error>>>()?,
+                .collect::<Result<_, Box<dyn Error + Send + Sync>>>()?,
             data_producer_ids: dump
                 .base
                 .data_producer_ids
                 .iter()
                 .map(|data_producer_id| Ok(data_producer_id.parse()?))
-                .collect::<Result<_, Box<dyn Error>>>()?,
+                .collect::<Result<_, Box<dyn Error + Send + Sync>>>()?,
             data_consumer_ids: dump
                 .base
                 .data_consumer_ids
                 .iter()
                 .map(|data_consumer_id| Ok(data_consumer_id.parse()?))
-                .collect::<Result<_, Box<dyn Error>>>()?,
+                .collect::<Result<_, Box<dyn Error + Send + Sync>>>()?,
             recv_rtp_header_extensions: RecvRtpHeaderExtensions::from_fbs(
                 dump.base.recv_rtp_header_extensions.as_ref(),
             ),
@@ -251,7 +253,7 @@ pub struct PlainTransportStat {
 impl PlainTransportStat {
     pub(crate) fn from_fbs(
         stats: plain_transport::GetStatsResponse,
-    ) -> Result<Self, Box<dyn Error>> {
+    ) -> Result<Self, Box<dyn Error + Send + Sync>> {
         Ok(Self {
             transport_id: stats.base.transport_id.parse()?,
             timestamp: stats.base.timestamp,
@@ -686,12 +688,12 @@ impl PlainTransport {
                 match Notification::from_fbs(notification) {
                     Ok(notification) => match notification {
                         Notification::Tuple { tuple } => {
-                            *data.tuple.lock() = tuple;
+                            *data.tuple.lock() = tuple.clone();
 
                             handlers.tuple.call_simple(&tuple);
                         }
                         Notification::RtcpTuple { rtcp_tuple } => {
-                            data.rtcp_tuple.lock().replace(rtcp_tuple);
+                            data.rtcp_tuple.lock().replace(rtcp_tuple.clone());
 
                             handlers.rtcp_tuple.call_simple(&rtcp_tuple);
                         }
@@ -903,13 +905,13 @@ impl PlainTransport {
     ///
     /// # Notes on usage
     /// * Once the plain transport is created, `transport.tuple()` will contain information about
-    ///   its `local_ip`, `local_port` and `protocol`.
+    ///   its `local_address`, `local_port` and `protocol`.
     /// * Information about `remote_ip` and `remote_port` will be set:
     ///   * after calling `connect()` method, or
     ///   * via dynamic remote address detection when using `comedia` mode.
     #[must_use]
     pub fn tuple(&self) -> TransportTuple {
-        *self.inner.data.tuple.lock()
+        self.inner.data.tuple.lock().clone()
     }
 
     /// The transport tuple for RTCP. If RTCP-mux is enabled (`rtcp_mux` is set), its value is
@@ -917,13 +919,13 @@ impl PlainTransport {
     ///
     /// # Notes on usage
     /// * Once the plain transport is created (with RTCP-mux disabled), `transport.rtcp_tuple()`
-    ///   will contain information about its `local_ip`, `local_port` and `protocol`.
+    ///   will contain information about its `local_address`, `local_port` and `protocol`.
     /// * Information about `remote_ip` and `remote_port` will be set:
     ///   * after calling `connect()` method, or
     ///   * via dynamic remote address detection when using `comedia` mode.
     #[must_use]
     pub fn rtcp_tuple(&self) -> Option<TransportTuple> {
-        *self.inner.data.rtcp_tuple.lock()
+        self.inner.data.rtcp_tuple.lock().clone()
     }
 
     /// Current SCTP state. Or `None` if SCTP is not enabled.

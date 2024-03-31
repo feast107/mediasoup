@@ -1,3 +1,4 @@
+import { once } from 'node:events';
 import * as flatbuffers from 'flatbuffers';
 import * as mediasoup from '../';
 import { UnsupportedError } from '../errors';
@@ -122,10 +123,10 @@ const ctx: TestContext = {
 				},
 			],
 			encodings: [
-				{ ssrc: 22222222, rtx: { ssrc: 22222223 } },
-				{ ssrc: 22222224, rtx: { ssrc: 22222225 } },
-				{ ssrc: 22222226, rtx: { ssrc: 22222227 } },
-				{ ssrc: 22222228, rtx: { ssrc: 22222229 } },
+				{ ssrc: 22222222, scalabilityMode: 'L1T5', rtx: { ssrc: 22222223 } },
+				{ ssrc: 22222224, scalabilityMode: 'L1T5', rtx: { ssrc: 22222225 } },
+				{ ssrc: 22222226, scalabilityMode: 'L1T5', rtx: { ssrc: 22222227 } },
+				{ ssrc: 22222228, scalabilityMode: 'L1T5', rtx: { ssrc: 22222229 } },
 			],
 			rtcp: {
 				cname: 'FOOBAR',
@@ -234,10 +235,10 @@ beforeEach(async () => {
 		listenIps: ['127.0.0.1'],
 	});
 	ctx.audioProducer = await ctx.webRtcTransport1.produce(
-		ctx.audioProducerOptions,
+		ctx.audioProducerOptions
 	);
 	ctx.videoProducer = await ctx.webRtcTransport1.produce(
-		ctx.videoProducerOptions,
+		ctx.videoProducerOptions
 	);
 });
 
@@ -245,8 +246,8 @@ afterEach(async () => {
 	ctx.worker?.close();
 
 	if (ctx.worker?.subprocessClosed === false) {
-		await new Promise<void>(
-			resolve => ctx.worker?.on('subprocessclose', resolve),
+		await new Promise<void>(resolve =>
+			ctx.worker?.on('subprocessclose', resolve)
 		);
 	}
 });
@@ -260,7 +261,7 @@ test('transport.consume() succeeds', async () => {
 		ctx.router!.canConsume({
 			producerId: ctx.audioProducer!.id,
 			rtpCapabilities: ctx.consumerDeviceCapabilities,
-		}),
+		})
 	).toBe(true);
 
 	const audioConsumer = await ctx.webRtcTransport2!.consume({
@@ -309,13 +310,13 @@ test('transport.consume() succeeds', async () => {
 	expect(dump1.mapProducerIdConsumerIds).toEqual(
 		expect.arrayContaining([
 			{ key: ctx.audioProducer!.id, values: [audioConsumer.id] },
-		]),
+		])
 	);
 
 	expect(dump1.mapConsumerIdProducerId).toEqual(
 		expect.arrayContaining([
 			{ key: audioConsumer.id, value: ctx.audioProducer!.id },
-		]),
+		])
 	);
 
 	await expect(ctx.webRtcTransport2!.dump()).resolves.toMatchObject({
@@ -332,7 +333,7 @@ test('transport.consume() succeeds', async () => {
 		ctx.router!.canConsume({
 			producerId: ctx.videoProducer!.id,
 			rtpCapabilities: ctx.consumerDeviceCapabilities,
-		}),
+		})
 	).toBe(true);
 
 	// Pause videoProducer.
@@ -342,7 +343,7 @@ test('transport.consume() succeeds', async () => {
 		producerId: ctx.videoProducer!.id,
 		rtpCapabilities: ctx.consumerDeviceCapabilities,
 		paused: true,
-		preferredLayers: { spatialLayer: 12 },
+		preferredLayers: { spatialLayer: 12, temporalLayer: 0 },
 		appData: { baz: 'LOL' },
 	});
 
@@ -401,7 +402,7 @@ test('transport.consume() succeeds', async () => {
 		ctx.router!.canConsume({
 			producerId: ctx.videoProducer!.id,
 			rtpCapabilities: ctx.consumerDeviceCapabilities,
-		}),
+		})
 	).toBe(true);
 
 	const videoPipeConsumer = await ctx.webRtcTransport2!.consume({
@@ -471,14 +472,14 @@ test('transport.consume() succeeds', async () => {
 					videoPipeConsumer.id,
 				]),
 			},
-		]),
+		])
 	);
 	expect(dump2.mapConsumerIdProducerId).toEqual(
 		expect.arrayContaining([
 			{ key: audioConsumer.id, value: ctx.audioProducer!.id },
 			{ key: videoConsumer.id, value: ctx.videoProducer!.id },
 			{ key: videoPipeConsumer.id, value: ctx.videoProducer!.id },
-		]),
+		])
 	);
 
 	await expect(ctx.webRtcTransport2!.dump()).resolves.toMatchObject({
@@ -523,7 +524,7 @@ test('transport.consume() can be created with user provided mid', async () => {
 	});
 
 	expect(audioConsumer1.rtpParameters.mid).toEqual(
-		expect.stringMatching(/^[0-9]+/),
+		expect.stringMatching(/^[0-9]+/)
 	);
 
 	const audioConsumer2 = await ctx.webRtcTransport2!.consume({
@@ -540,10 +541,10 @@ test('transport.consume() can be created with user provided mid', async () => {
 	});
 
 	expect(audioConsumer3.rtpParameters.mid).toEqual(
-		expect.stringMatching(/^[0-9]+/),
+		expect.stringMatching(/^[0-9]+/)
 	);
 	expect(Number(audioConsumer1.rtpParameters.mid) + 1).toBe(
-		Number(audioConsumer3.rtpParameters.mid),
+		Number(audioConsumer3.rtpParameters.mid)
 	);
 }, 2000);
 
@@ -567,14 +568,14 @@ test('transport.consume() with incompatible rtpCapabilities rejects with Unsuppo
 		ctx.router!.canConsume({
 			producerId: ctx.audioProducer!.id,
 			rtpCapabilities: invalidDeviceCapabilities,
-		}),
+		})
 	).toBe(false);
 
 	await expect(
 		ctx.webRtcTransport2!.consume({
 			producerId: ctx.audioProducer!.id,
 			rtpCapabilities: invalidDeviceCapabilities,
-		}),
+		})
 	).rejects.toThrow(UnsupportedError);
 
 	invalidDeviceCapabilities = {
@@ -586,14 +587,14 @@ test('transport.consume() with incompatible rtpCapabilities rejects with Unsuppo
 		ctx.router!.canConsume({
 			producerId: ctx.audioProducer!.id,
 			rtpCapabilities: invalidDeviceCapabilities,
-		}),
+		})
 	).toBe(false);
 
 	await expect(
 		ctx.webRtcTransport2!.consume({
 			producerId: ctx.audioProducer!.id,
 			rtpCapabilities: invalidDeviceCapabilities,
-		}),
+		})
 	).rejects.toThrow(UnsupportedError);
 }, 2000);
 
@@ -728,7 +729,7 @@ test('consumer.dump() succeeds', async () => {
 			rtx: {
 				ssrc: videoConsumer.rtpParameters.encodings?.[0].rtx?.ssrc,
 			},
-			scalabilityMode: 'L4T1',
+			scalabilityMode: 'L4T5',
 		},
 	]);
 	expect(Array.isArray(dump2.consumableRtpEncodings)).toBe(true);
@@ -736,22 +737,26 @@ test('consumer.dump() succeeds', async () => {
 	expect(dump2.consumableRtpEncodings![0]).toEqual(
 		expect.objectContaining({
 			ssrc: ctx.videoProducer!.consumableRtpParameters.encodings?.[0].ssrc,
-		}),
+			scalabilityMode: 'L1T5',
+		})
 	);
 	expect(dump2.consumableRtpEncodings![1]).toEqual(
 		expect.objectContaining({
 			ssrc: ctx.videoProducer!.consumableRtpParameters.encodings?.[1].ssrc,
-		}),
+			scalabilityMode: 'L1T5',
+		})
 	);
 	expect(dump2.consumableRtpEncodings![2]).toEqual(
 		expect.objectContaining({
 			ssrc: ctx.videoProducer!.consumableRtpParameters.encodings?.[2].ssrc,
-		}),
+			scalabilityMode: 'L1T5',
+		})
 	);
 	expect(dump2.consumableRtpEncodings![3]).toEqual(
 		expect.objectContaining({
 			ssrc: ctx.videoProducer!.consumableRtpParameters.encodings?.[3].ssrc,
-		}),
+			scalabilityMode: 'L1T5',
+		})
 	);
 	expect(dump2.supportedCodecPayloadTypes).toEqual([103]);
 	expect(dump2.paused).toBe(true);
@@ -869,7 +874,31 @@ test('consumer.setPreferredLayers() succeed', async () => {
 
 	expect(videoConsumer.preferredLayers).toEqual({
 		spatialLayer: 2,
+		temporalLayer: 3,
+	});
+
+	await videoConsumer.setPreferredLayers({ spatialLayer: 3 });
+
+	expect(videoConsumer.preferredLayers).toEqual({
+		spatialLayer: 3,
+		temporalLayer: 4,
+	});
+
+	await videoConsumer.setPreferredLayers({ spatialLayer: 3, temporalLayer: 0 });
+
+	expect(videoConsumer.preferredLayers).toEqual({
+		spatialLayer: 3,
 		temporalLayer: 0,
+	});
+
+	await videoConsumer.setPreferredLayers({
+		spatialLayer: 66,
+		temporalLayer: 66,
+	});
+
+	expect(videoConsumer.preferredLayers).toEqual({
+		spatialLayer: 3,
+		temporalLayer: 4,
 	});
 }, 2000);
 
@@ -884,18 +913,18 @@ test('consumer.setPreferredLayers() with wrong arguments rejects with TypeError'
 
 	await expect(
 		// @ts-ignore
-		videoConsumer.setPreferredLayers({ foo: '123' }),
+		videoConsumer.setPreferredLayers({ foo: '123' })
 	).rejects.toThrow(TypeError);
 
 	// @ts-ignore
 	await expect(videoConsumer.setPreferredLayers('foo')).rejects.toThrow(
-		TypeError,
+		TypeError
 	);
 
 	// Missing spatialLayer.
 	await expect(
 		// @ts-ignore
-		videoConsumer.setPreferredLayers({ temporalLayer: 2 }),
+		videoConsumer.setPreferredLayers({ temporalLayer: 2 })
 	).rejects.toThrow(TypeError);
 }, 2000);
 
@@ -957,7 +986,7 @@ test('consumer.enableTraceEvent() succeed', async () => {
 	const dump3 = await audioConsumer.dump();
 
 	expect(dump3.traceEventTypes).toEqual(
-		expect.arrayContaining(['nack', 'fir']),
+		expect.arrayContaining(['nack', 'fir'])
 	);
 
 	await audioConsumer.enableTraceEvent();
@@ -978,12 +1007,12 @@ test('consumer.enableTraceEvent() with wrong arguments rejects with TypeError', 
 
 	// @ts-ignore
 	await expect(audioConsumer.enableTraceEvent('rtp')).rejects.toThrow(
-		TypeError,
+		TypeError
 	);
 
 	await expect(
 		// @ts-ignore
-		audioConsumer.enableTraceEvent(['fir', 123.123]),
+		audioConsumer.enableTraceEvent(['fir', 123.123])
 	).rejects.toThrow(TypeError);
 }, 2000);
 
@@ -993,26 +1022,24 @@ test('Consumer emits "producerpause" and "producerresume"', async () => {
 		rtpCapabilities: ctx.consumerDeviceCapabilities,
 	});
 
-	// eslint-disable-next-line no-async-promise-executor
-	await new Promise<void>(async resolve => {
-		audioConsumer.on('producerpause', resolve);
+	await Promise.all([
+		once(audioConsumer, 'producerpause'),
 
 		// Let's await for pause() to resolve to avoid aborted channel requests
 		// due to worker closure.
-		await ctx.audioProducer!.pause();
-	});
+		ctx.audioProducer!.pause(),
+	]);
 
 	expect(audioConsumer.paused).toBe(false);
 	expect(audioConsumer.producerPaused).toBe(true);
 
-	// eslint-disable-next-line no-async-promise-executor
-	await new Promise<void>(async resolve => {
-		audioConsumer.on('producerresume', resolve);
+	await Promise.all([
+		once(audioConsumer, 'producerresume'),
 
 		// Let's await for resume() to resolve to avoid aborted channel requests
 		// due to worker closure.
-		await ctx.audioProducer!.resume();
-	});
+		ctx.audioProducer!.resume(),
+	]);
 
 	expect(audioConsumer.paused).toBe(false);
 	expect(audioConsumer.producerPaused).toBe(false);
@@ -1034,20 +1061,20 @@ test('Consumer emits "score"', async () => {
 	const builder = new flatbuffers.Builder();
 	const consumerScore = new FbsConsumer.ConsumerScoreT(9, 10, [8]);
 	const consumerScoreNotification = new FbsConsumer.ScoreNotificationT(
-		consumerScore,
+		consumerScore
 	);
 	const notificationOffset = Notification.createNotification(
 		builder,
 		builder.createString(audioConsumer.id),
 		Event.CONSUMER_SCORE,
 		NotificationBody.Consumer_ScoreNotification,
-		consumerScoreNotification.pack(builder),
+		consumerScoreNotification.pack(builder)
 	);
 
 	builder.finish(notificationOffset);
 
 	const notification = Notification.getRootAsNotification(
-		new flatbuffers.ByteBuffer(builder.asUint8Array()),
+		new flatbuffers.ByteBuffer(builder.asUint8Array())
 	);
 
 	channel.emit(audioConsumer.id, Event.CONSUMER_SCORE, notification);
@@ -1085,7 +1112,7 @@ test('consumer.close() succeeds', async () => {
 		expect.arrayContaining([
 			{ key: ctx.audioProducer!.id, values: [] },
 			{ key: ctx.videoProducer!.id, values: [videoConsumer.id] },
-		]),
+		])
 	);
 	expect(routerDump.mapConsumerIdProducerId).toEqual([
 		{ key: videoConsumer!.id, value: ctx.videoProducer!.id },

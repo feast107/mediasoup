@@ -97,6 +97,11 @@ export type WebRtcTransportOptionsBase<WebRtcTransportAppData> = {
 	preferTcp?: boolean;
 
 	/**
+	 * ICE consent timeout (in seconds). If 0 it is disabled. Default 30.
+	 */
+	iceConsentTimeout?: number;
+
+	/**
 	 * Initial available outgoing bitrate (in bps). Default 600000.
 	 */
 	initialAvailableOutgoingBitrate?: number;
@@ -138,7 +143,9 @@ export type IceParameters = {
 export type IceCandidate = {
 	foundation: string;
 	priority: number;
+	// @deprecated Use |address| instead.
 	ip: string;
+	address: string;
 	protocol: TransportProtocol;
 	port: number;
 	type: IceCandidateType;
@@ -260,7 +267,7 @@ export class WebRtcTransport<
 	 * @private
 	 */
 	constructor(
-		options: WebRtcTransportConstructorOptions<WebRtcTransportAppData>,
+		options: WebRtcTransportConstructorOptions<WebRtcTransportAppData>
 	) {
 		super(options);
 
@@ -428,7 +435,7 @@ export class WebRtcTransport<
 			FbsRequest.Method.TRANSPORT_DUMP,
 			undefined,
 			undefined,
-			this.internal.transportId,
+			this.internal.transportId
 		);
 
 		/* Decode Response. */
@@ -451,7 +458,7 @@ export class WebRtcTransport<
 			FbsRequest.Method.TRANSPORT_GET_STATS,
 			undefined,
 			undefined,
-			this.internal.transportId,
+			this.internal.transportId
 		);
 
 		/* Decode Response. */
@@ -484,7 +491,7 @@ export class WebRtcTransport<
 			FbsRequest.Method.WEBRTCTRANSPORT_CONNECT,
 			FbsRequest.Body.WebRtcTransport_ConnectRequest,
 			requestOffset,
-			this.internal.transportId,
+			this.internal.transportId
 		);
 
 		/* Decode Response. */
@@ -506,7 +513,7 @@ export class WebRtcTransport<
 			FbsRequest.Method.TRANSPORT_RESTART_ICE,
 			undefined,
 			undefined,
-			this.internal.transportId,
+			this.internal.transportId
 		);
 
 		/* Decode Response. */
@@ -624,7 +631,7 @@ export class WebRtcTransport<
 						logger.error('ignoring unknown event "%s"', event);
 					}
 				}
-			},
+			}
 		);
 	}
 }
@@ -670,7 +677,7 @@ function iceCandidateTypeFromFbs(type: FbsIceCandidateType): IceCandidateType {
 }
 
 function iceCandidateTcpTypeFromFbs(
-	type: FbsIceCandidateTcpType,
+	type: FbsIceCandidateTcpType
 ): IceCandidateTcpType {
 	switch (type) {
 		case FbsIceCandidateTcpType.PASSIVE: {
@@ -720,7 +727,7 @@ function dtlsRoleFromFbs(role: FbsDtlsRole): DtlsRole {
 }
 
 function fingerprintAlgorithmsFromFbs(
-	algorithm: FbsFingerprintAlgorithm,
+	algorithm: FbsFingerprintAlgorithm
 ): FingerprintAlgorithm {
 	switch (algorithm) {
 		case FbsFingerprintAlgorithm.SHA1: {
@@ -746,7 +753,7 @@ function fingerprintAlgorithmsFromFbs(
 }
 
 function fingerprintAlgorithmToFbs(
-	algorithm: FingerprintAlgorithm,
+	algorithm: FingerprintAlgorithm
 ): FbsFingerprintAlgorithm {
 	switch (algorithm) {
 		case 'sha-1': {
@@ -796,7 +803,7 @@ function dtlsRoleToFbs(role: DtlsRole): FbsDtlsRole {
 }
 
 export function parseWebRtcTransportDumpResponse(
-	binary: FbsWebRtcTransport.DumpResponse,
+	binary: FbsWebRtcTransport.DumpResponse
 ): WebRtcTransportDump {
 	// Retrieve BaseTransportDump.
 	const baseTransportDump = parseBaseTransportDump(binary.base()!);
@@ -804,7 +811,7 @@ export function parseWebRtcTransportDumpResponse(
 	const iceCandidates = parseVector<IceCandidate>(
 		binary,
 		'iceCandidates',
-		parseIceCandidate,
+		parseIceCandidate
 	);
 	// Retrieve ICE parameters.
 	const iceParameters = parseIceParameters(binary.iceParameters()!);
@@ -834,15 +841,14 @@ function createConnectRequest({
 	// Serialize DtlsParameters. This can throw.
 	const dtlsParametersOffset = serializeDtlsParameters(builder, dtlsParameters);
 
-	// Create request.
 	return FbsWebRtcTransport.ConnectRequest.createConnectRequest(
 		builder,
-		dtlsParametersOffset,
+		dtlsParametersOffset
 	);
 }
 
 function parseGetStatsResponse(
-	binary: FbsWebRtcTransport.GetStatsResponse,
+	binary: FbsWebRtcTransport.GetStatsResponse
 ): WebRtcTransportStat {
 	const base = parseBaseTransportStats(binary.base()!);
 
@@ -859,12 +865,13 @@ function parseGetStatsResponse(
 }
 
 function parseIceCandidate(
-	binary: FbsWebRtcTransport.IceCandidate,
+	binary: FbsWebRtcTransport.IceCandidate
 ): IceCandidate {
 	return {
 		foundation: binary.foundation()!,
 		priority: binary.priority(),
-		ip: binary.ip()!,
+		ip: binary.address()!,
+		address: binary.address()!,
 		protocol: parseProtocol(binary.protocol()),
 		port: binary.port(),
 		type: iceCandidateTypeFromFbs(binary.type()),
@@ -876,7 +883,7 @@ function parseIceCandidate(
 }
 
 function parseIceParameters(
-	binary: FbsWebRtcTransport.IceParameters,
+	binary: FbsWebRtcTransport.IceParameters
 ): IceParameters {
 	return {
 		usernameFragment: binary.usernameFragment()!,
@@ -886,7 +893,7 @@ function parseIceParameters(
 }
 
 function parseDtlsParameters(
-	binary: FbsWebRtcTransport.DtlsParameters,
+	binary: FbsWebRtcTransport.DtlsParameters
 ): DtlsParameters {
 	const fingerprints: DtlsFingerprint[] = [];
 
@@ -908,7 +915,7 @@ function parseDtlsParameters(
 
 function serializeDtlsParameters(
 	builder: flatbuffers.Builder,
-	dtlsParameters: DtlsParameters,
+	dtlsParameters: DtlsParameters
 ): number {
 	const fingerprints: number[] = [];
 
@@ -918,7 +925,7 @@ function serializeDtlsParameters(
 		const fingerprintOffset = FbsWebRtcTransport.Fingerprint.createFingerprint(
 			builder,
 			algorithm,
-			valueOffset,
+			valueOffset
 		);
 
 		fingerprints.push(fingerprintOffset);
@@ -927,7 +934,7 @@ function serializeDtlsParameters(
 	const fingerprintsOffset =
 		FbsWebRtcTransport.DtlsParameters.createFingerprintsVector(
 			builder,
-			fingerprints,
+			fingerprints
 		);
 
 	const role =
@@ -938,6 +945,6 @@ function serializeDtlsParameters(
 	return FbsWebRtcTransport.DtlsParameters.createDtlsParameters(
 		builder,
 		fingerprintsOffset,
-		role,
+		role
 	);
 }

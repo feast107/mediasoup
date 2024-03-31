@@ -5,13 +5,15 @@ import * as path from 'node:path';
 import { execSync } from 'node:child_process';
 import fetch from 'node-fetch';
 import tar from 'tar';
+import * as ini from 'ini';
 
-const PKG = JSON.parse(fs.readFileSync('./package.json').toString());
+const PKG = JSON.parse(
+	fs.readFileSync('./package.json', { encoding: 'utf-8' })
+);
 const IS_WINDOWS = os.platform() === 'win32';
 const MAYOR_VERSION = PKG.version.split('.')[0];
 const PYTHON = getPython();
 const PIP_INVOKE_DIR = path.resolve('worker/pip_invoke');
-const FLATBUFFERS_VERSION = '23.3.3';
 const WORKER_RELEASE_DIR = 'worker/out/Release';
 const WORKER_RELEASE_BIN = IS_WINDOWS
 	? 'mediasoup-worker.exe'
@@ -81,7 +83,7 @@ async function run() {
 				!process.env.MEDIASOUP_FORCE_WORKER_PREBUILT_DOWNLOAD
 			) {
 				logInfo(
-					'skipping mediasoup-worker prebuilt download, building it locally',
+					'skipping mediasoup-worker prebuilt download, building it locally'
 				);
 
 				buildWorker();
@@ -93,7 +95,7 @@ async function run() {
 			// Attempt to download a prebuilt binary. Fallback to building locally.
 			else if (!(await downloadPrebuiltWorker())) {
 				logInfo(
-					`couldn't fetch any mediasoup-worker prebuilt binary, building it locally`,
+					`couldn't fetch any mediasoup-worker prebuilt binary, building it locally`
 				);
 
 				buildWorker();
@@ -223,28 +225,11 @@ async function run() {
 				repo: GH_REPO,
 				name: PKG.version,
 				body: versionChanges,
-				// eslint-disable-next-line camelcase
 				tag_name: PKG.version,
 				draft: false,
 			});
 
-			// GitHub mediasoup-worker-prebuild CI action doesn't create mediasoup-worker
-			// prebuilt binary for macOS ARM. If this is a macOS ARM machine, do it here
-			// and upload it to the release.
-			if (os.platform() === 'darwin' && os.arch() === 'arm64') {
-				await prebuildWorker();
-				await uploadMacArmPrebuiltWorker();
-			}
-
 			executeCmd('npm publish');
-
-			break;
-		}
-
-		case 'release:upload-mac-arm-prebuilt-worker': {
-			checkRelease();
-			await prebuildWorker();
-			await uploadMacArmPrebuiltWorker();
 
 			break;
 		}
@@ -297,7 +282,7 @@ function installInvoke() {
 	// installation.
 	executeCmd(
 		`"${PYTHON}" -m pip install --upgrade --no-user --target "${PIP_INVOKE_DIR}" invoke`,
-		/* exitOnError */ true,
+		/* exitOnError */ true
 	);
 }
 
@@ -352,9 +337,7 @@ function lintNode() {
 	// rules.
 	executeCmd('eslint-config-prettier .eslintrc.js');
 
-	executeCmd(
-		'eslint -c .eslintrc.js --ignore-path .eslintignore --max-warnings 0 .',
-	);
+	executeCmd('eslint -c .eslintrc.js --max-warnings 0 .');
 }
 
 function lintWorker() {
@@ -381,6 +364,18 @@ function flatcNode() {
 
 	const buildType = process.env.MEDIASOUP_BUILDTYPE || 'Release';
 	const extension = IS_WINDOWS ? '.exe' : '';
+	const flatbuffersWrapFilePath = path.join(
+		'worker',
+		'subprojects',
+		'flatbuffers.wrap'
+	);
+	const flatbuffersWrap = ini.parse(
+		fs.readFileSync(flatbuffersWrapFilePath, {
+			encoding: 'utf-8',
+		})
+	);
+	const flatbuffersDir = flatbuffersWrap['wrap-file']['directory'];
+
 	const flatc = path.resolve(
 		path.join(
 			'worker',
@@ -388,10 +383,11 @@ function flatcNode() {
 			buildType,
 			'build',
 			'subprojects',
-			`flatbuffers-${FLATBUFFERS_VERSION}`,
-			`flatc${extension}`,
-		),
+			flatbuffersDir,
+			`flatc${extension}`
+		)
 	);
+
 	const out = path.resolve(path.join('node', 'src'));
 
 	for (const dirent of fs.readdirSync(path.join('worker', 'fbs'), {
@@ -404,7 +400,7 @@ function flatcNode() {
 		const filePath = path.resolve(path.join('worker', 'fbs', dirent.name));
 
 		executeCmd(
-			`"${flatc}" --ts --ts-no-import-ext --gen-object-api -o "${out}" "${filePath}"`,
+			`"${flatc}" --ts --ts-no-import-ext --gen-object-api -o "${out}" "${filePath}"`
 		);
 	}
 }
@@ -475,7 +471,7 @@ async function prebuildWorker() {
 					cwd: WORKER_RELEASE_DIR,
 					gzip: true,
 				},
-				[WORKER_RELEASE_BIN],
+				[WORKER_RELEASE_BIN]
 			)
 			.pipe(fs.createWriteStream(WORKER_PREBUILD_TAR_PATH))
 			.on('finish', resolve)
@@ -488,7 +484,9 @@ async function prebuildWorker() {
 async function downloadPrebuiltWorker() {
 	const releaseBase =
 		process.env.MEDIASOUP_WORKER_PREBUILT_DOWNLOAD_BASE_URL ||
-		`${PKG.repository.url.replace(/\.git$/, '')}/releases/download`;
+		`${PKG.repository.url
+			.replace(/^git\+/, '')
+			.replace(/\.git$/, '')}/releases/download`;
 
 	const tarUrl = `${releaseBase}/${PKG.version}/${WORKER_PREBUILD_TAR}`;
 
@@ -503,20 +501,20 @@ async function downloadPrebuiltWorker() {
 
 		if (res.status === 404) {
 			logInfo(
-				'downloadPrebuiltWorker() | no available mediasoup-worker prebuilt binary for current architecture',
+				'downloadPrebuiltWorker() | no available mediasoup-worker prebuilt binary for current architecture'
 			);
 
 			return false;
 		} else if (!res.ok) {
 			logError(
-				`downloadPrebuiltWorker() | failed to download mediasoup-worker prebuilt binary: ${res.status} ${res.statusText}`,
+				`downloadPrebuiltWorker() | failed to download mediasoup-worker prebuilt binary: ${res.status} ${res.statusText}`
 			);
 
 			return false;
 		}
 	} catch (error) {
 		logError(
-			`downloadPrebuiltWorker() | failed to download mediasoup-worker prebuilt binary: ${error}`,
+			`downloadPrebuiltWorker() | failed to download mediasoup-worker prebuilt binary: ${error}`
 		);
 
 		return false;
@@ -531,11 +529,11 @@ async function downloadPrebuiltWorker() {
 				tar.extract({
 					newer: false,
 					cwd: WORKER_RELEASE_DIR,
-				}),
+				})
 			)
 			.on('finish', () => {
 				logInfo(
-					'downloadPrebuiltWorker() | got mediasoup-worker prebuilt binary',
+					'downloadPrebuiltWorker() | got mediasoup-worker prebuilt binary'
 				);
 
 				try {
@@ -543,7 +541,7 @@ async function downloadPrebuiltWorker() {
 					fs.chmodSync(WORKER_RELEASE_BIN_PATH, 0o775);
 				} catch (error) {
 					logWarn(
-						`downloadPrebuiltWorker() | failed to give execution permissions to the mediasoup-worker prebuilt binary: ${error}`,
+						`downloadPrebuiltWorker() | failed to give execution permissions to the mediasoup-worker prebuilt binary: ${error}`
 					);
 				}
 
@@ -554,7 +552,7 @@ async function downloadPrebuiltWorker() {
 				// expect exit code 41 (see main.cpp).
 
 				logInfo(
-					'downloadPrebuiltWorker() | checking fetched mediasoup-worker prebuilt binary in current host',
+					'downloadPrebuiltWorker() | checking fetched mediasoup-worker prebuilt binary in current host'
 				);
 
 				try {
@@ -570,13 +568,13 @@ async function downloadPrebuiltWorker() {
 				} catch (error) {
 					if (error.status === 41) {
 						logInfo(
-							'downloadPrebuiltWorker() | fetched mediasoup-worker prebuilt binary is valid for current host',
+							'downloadPrebuiltWorker() | fetched mediasoup-worker prebuilt binary is valid for current host'
 						);
 
 						resolve(true);
 					} else {
 						logError(
-							`downloadPrebuiltWorker() | fetched mediasoup-worker prebuilt binary fails to run in this host [status:${error.status}]`,
+							`downloadPrebuiltWorker() | fetched mediasoup-worker prebuilt binary fails to run in this host [status:${error.status}]`
 						);
 
 						try {
@@ -589,40 +587,11 @@ async function downloadPrebuiltWorker() {
 			})
 			.on('error', error => {
 				logError(
-					`downloadPrebuiltWorker() | failed to uncompress downloaded mediasoup-worker prebuilt binary: ${error}`,
+					`downloadPrebuiltWorker() | failed to uncompress downloaded mediasoup-worker prebuilt binary: ${error}`
 				);
 
 				resolve(false);
 			});
-	});
-}
-
-async function uploadMacArmPrebuiltWorker() {
-	if (os.platform() !== 'darwin' || os.arch() !== 'arm64') {
-		logError('uploadMacArmPrebuiltWorker() | invalid platform or architecture');
-
-		exitWithError();
-	}
-
-	const octokit = await getOctokit();
-
-	logInfo('uploadMacArmPrebuiltWorker() | getting release info');
-
-	const release = await octokit.rest.repos.getReleaseByTag({
-		owner: GH_OWNER,
-		repo: GH_REPO,
-		tag: PKG.version,
-	});
-
-	logInfo('uploadMacArmPrebuiltWorker() | uploading release asset');
-
-	await octokit.rest.repos.uploadReleaseAsset({
-		owner: GH_OWNER,
-		repo: GH_REPO,
-		// eslint-disable-next-line camelcase
-		release_id: release.data.id,
-		name: WORKER_PREBUILD_TAR,
-		data: fs.readFileSync(WORKER_PREBUILD_TAR_PATH),
 	});
 }
 
@@ -647,7 +616,7 @@ async function getVersionChanges() {
 	// NOTE: Load dep on demand since it's a devDependency.
 	const marked = await import('marked');
 
-	const changelog = fs.readFileSync('./CHANGELOG.md').toString();
+	const changelog = fs.readFileSync('./CHANGELOG.md', { encoding: 'utf-8' });
 	const entries = marked.lexer(changelog);
 
 	for (let idx = 0; idx < entries.length; ++idx) {
@@ -662,7 +631,7 @@ async function getVersionChanges() {
 
 	// This should not happen (unless author forgot to update CHANGELOG).
 	throw new Error(
-		`no entry found in CHANGELOG.md for version '${PKG.version}'`,
+		`no entry found in CHANGELOG.md for version '${PKG.version}'`
 	);
 }
 

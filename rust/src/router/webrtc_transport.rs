@@ -88,8 +88,8 @@ impl TryFrom<Vec<ListenInfo>> for WebRtcTransportListenInfos {
 /// # Notes on usage
 /// * Do not use "0.0.0.0" into `listen_infos`. Values in `listen_infos` must be specific bindable IPs
 ///   on the host.
-/// * If you use "0.0.0.0" or "::" into `listen_infos`, then you need to also provide `announced_ip`
-///   in the corresponding entry in `listen_infos`.
+/// * If you use "0.0.0.0" or "::" into `listen_infos`, then you need to also provide
+/// `announced_address` in the corresponding entry in `listen_infos`.
 #[derive(Debug, Clone)]
 pub enum WebRtcTransportListen {
     /// Listen on individual protocol/IP/port combinations specific to this transport.
@@ -129,6 +129,9 @@ pub struct WebRtcTransportOptions {
     /// Prefer TCP.
     /// Default false.
     pub prefer_tcp: bool,
+    /// ICE consent timeout (in seconds). If 0 it is disabled.
+    /// Default 30.
+    pub ice_consent_timeout: u8,
     /// Create a SCTP association.
     /// Default false.
     pub enable_sctp: bool,
@@ -155,6 +158,7 @@ impl WebRtcTransportOptions {
             enable_tcp: false,
             prefer_udp: false,
             prefer_tcp: false,
+            ice_consent_timeout: 30,
             enable_sctp: false,
             num_sctp_streams: NumSctpStreams::default(),
             max_sctp_message_size: 262_144,
@@ -172,6 +176,7 @@ impl WebRtcTransportOptions {
             enable_tcp: true,
             prefer_udp: false,
             prefer_tcp: false,
+            ice_consent_timeout: 30,
             enable_sctp: false,
             num_sctp_streams: NumSctpStreams::default(),
             max_sctp_message_size: 262_144,
@@ -213,7 +218,9 @@ pub struct WebRtcTransportDump {
 }
 
 impl WebRtcTransportDump {
-    pub(crate) fn from_fbs(dump: web_rtc_transport::DumpResponse) -> Result<Self, Box<dyn Error>> {
+    pub(crate) fn from_fbs(
+        dump: web_rtc_transport::DumpResponse,
+    ) -> Result<Self, Box<dyn Error + Send + Sync>> {
         Ok(Self {
             // Common to all Transports.
             id: dump.base.id.parse()?,
@@ -223,37 +230,37 @@ impl WebRtcTransportDump {
                 .producer_ids
                 .iter()
                 .map(|producer_id| Ok(producer_id.parse()?))
-                .collect::<Result<_, Box<dyn Error>>>()?,
+                .collect::<Result<_, Box<dyn Error + Send + Sync>>>()?,
             consumer_ids: dump
                 .base
                 .consumer_ids
                 .iter()
                 .map(|consumer_id| Ok(consumer_id.parse()?))
-                .collect::<Result<_, Box<dyn Error>>>()?,
+                .collect::<Result<_, Box<dyn Error + Send + Sync>>>()?,
             map_ssrc_consumer_id: dump
                 .base
                 .map_ssrc_consumer_id
                 .iter()
                 .map(|key_value| Ok((key_value.key, key_value.value.parse()?)))
-                .collect::<Result<_, Box<dyn Error>>>()?,
+                .collect::<Result<_, Box<dyn Error + Send + Sync>>>()?,
             map_rtx_ssrc_consumer_id: dump
                 .base
                 .map_rtx_ssrc_consumer_id
                 .iter()
                 .map(|key_value| Ok((key_value.key, key_value.value.parse()?)))
-                .collect::<Result<_, Box<dyn Error>>>()?,
+                .collect::<Result<_, Box<dyn Error + Send + Sync>>>()?,
             data_producer_ids: dump
                 .base
                 .data_producer_ids
                 .iter()
                 .map(|data_producer_id| Ok(data_producer_id.parse()?))
-                .collect::<Result<_, Box<dyn Error>>>()?,
+                .collect::<Result<_, Box<dyn Error + Send + Sync>>>()?,
             data_consumer_ids: dump
                 .base
                 .data_consumer_ids
                 .iter()
                 .map(|data_consumer_id| Ok(data_consumer_id.parse()?))
-                .collect::<Result<_, Box<dyn Error>>>()?,
+                .collect::<Result<_, Box<dyn Error + Send + Sync>>>()?,
             recv_rtp_header_extensions: RecvRtpHeaderExtensions::from_fbs(
                 dump.base.recv_rtp_header_extensions.as_ref(),
             ),
@@ -342,7 +349,7 @@ pub struct WebRtcTransportStat {
 impl WebRtcTransportStat {
     pub(crate) fn from_fbs(
         stats: web_rtc_transport::GetStatsResponse,
-    ) -> Result<Self, Box<dyn Error>> {
+    ) -> Result<Self, Box<dyn Error + Send + Sync>> {
         Ok(Self {
             transport_id: stats.base.transport_id.parse()?,
             timestamp: stats.base.timestamp,
@@ -809,7 +816,9 @@ impl WebRtcTransport {
                             });
                         }
                         Notification::IceSelectedTupleChange { ice_selected_tuple } => {
-                            data.ice_selected_tuple.lock().replace(ice_selected_tuple);
+                            data.ice_selected_tuple
+                                .lock()
+                                .replace(ice_selected_tuple.clone());
                             handlers
                                 .ice_selected_tuple_change
                                 .call_simple(&ice_selected_tuple);
@@ -1021,7 +1030,7 @@ impl WebRtcTransport {
     /// ICE is not established (no working candidate pair was found).
     #[must_use]
     pub fn ice_selected_tuple(&self) -> Option<TransportTuple> {
-        *self.inner.data.ice_selected_tuple.lock()
+        self.inner.data.ice_selected_tuple.lock().clone()
     }
 
     /// Local DTLS parameters.
