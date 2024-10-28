@@ -1,4 +1,5 @@
 import { Logger } from './Logger';
+import { EnhancedEventEmitter } from './enhancedEvents';
 import { UnsupportedError } from './errors';
 import {
 	BaseTransportDump,
@@ -44,6 +45,9 @@ export type DirectTransportEvents = TransportEvents & {
 	rtcp: [Buffer];
 };
 
+export type DirectTransportObserver =
+	EnhancedEventEmitter<DirectTransportObserverEvents>;
+
 export type DirectTransportObserverEvents = TransportObserverEvents & {
 	rtcp: [Buffer];
 };
@@ -64,9 +68,10 @@ export class DirectTransport<
 > extends Transport<
 	DirectTransportAppData,
 	DirectTransportEvents,
-	DirectTransportObserverEvents
+	DirectTransportObserver
 > {
 	// DirectTransport data.
+	// eslint-disable-next-line no-unused-private-class-members
 	readonly #data: DirectTransportData;
 
 	/**
@@ -75,7 +80,10 @@ export class DirectTransport<
 	constructor(
 		options: DirectTransportConstructorOptions<DirectTransportAppData>
 	) {
-		super(options);
+		const observer: DirectTransportObserver =
+			new EnhancedEventEmitter<DirectTransportObserverEvents>();
+
+		super(options, observer);
 
 		logger.debug('constructor()');
 
@@ -84,6 +92,15 @@ export class DirectTransport<
 		};
 
 		this.handleWorkerNotifications();
+	}
+
+	/**
+	 * Observer.
+	 *
+	 * @override
+	 */
+	get observer(): DirectTransportObserver {
+		return super.observer;
 	}
 
 	/**
@@ -162,6 +179,7 @@ export class DirectTransport<
 	 *
 	 * @override
 	 */
+	// eslint-disable-next-line @typescript-eslint/require-await
 	async connect(): Promise<void> {
 		logger.debug('connect()');
 	}
@@ -169,7 +187,7 @@ export class DirectTransport<
 	/**
 	 * @override
 	 */
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
 	async setMaxIncomingBitrate(bitrate: number): Promise<void> {
 		throw new UnsupportedError(
 			'setMaxIncomingBitrate() not implemented in DirectTransport'
@@ -179,7 +197,7 @@ export class DirectTransport<
 	/**
 	 * @override
 	 */
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
 	async setMaxOutgoingBitrate(bitrate: number): Promise<void> {
 		throw new UnsupportedError(
 			'setMaxOutgoingBitrate() not implemented in DirectTransport'
@@ -189,7 +207,7 @@ export class DirectTransport<
 	/**
 	 * @override
 	 */
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
 	async setMinOutgoingBitrate(bitrate: number): Promise<void> {
 		throw new UnsupportedError(
 			'setMinOutgoingBitrate() not implemented in DirectTransport'
@@ -258,7 +276,7 @@ export class DirectTransport<
 					}
 
 					default: {
-						logger.error('ignoring unknown event "%s"', event);
+						logger.error(`ignoring unknown event "${event}"`);
 					}
 				}
 			}

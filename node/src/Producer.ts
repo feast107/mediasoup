@@ -140,6 +140,8 @@ export type ProducerEvents = {
 	'@close': [];
 };
 
+export type ProducerObserver = EnhancedEventEmitter<ProducerObserverEvents>;
+
 export type ProducerObserverEvents = {
 	close: [];
 	pause: [];
@@ -198,7 +200,8 @@ export class Producer<
 	#score: ProducerScore[] = [];
 
 	// Observer instance.
-	readonly #observer = new EnhancedEventEmitter<ProducerObserverEvents>();
+	readonly #observer: ProducerObserver =
+		new EnhancedEventEmitter<ProducerObserverEvents>();
 
 	/**
 	 * @private
@@ -224,7 +227,7 @@ export class Producer<
 		this.#data = data;
 		this.#channel = channel;
 		this.#paused = paused;
-		this.#appData = appData || ({} as ProducerAppData);
+		this.#appData = appData ?? ({} as ProducerAppData);
 
 		this.handleWorkerNotifications();
 	}
@@ -304,7 +307,7 @@ export class Producer<
 	/**
 	 * Observer.
 	 */
-	get observer(): EnhancedEventEmitter<ProducerObserverEvents> {
+	get observer(): ProducerObserver {
 		return this.#observer;
 	}
 
@@ -583,7 +586,7 @@ export class Producer<
 					}
 
 					default: {
-						logger.error('ignoring unknown event "%s"', event);
+						logger.error(`ignoring unknown event "${event}"`);
 					}
 				}
 			}
@@ -623,6 +626,10 @@ export function producerTypeToFbs(type: ProducerType): FbsRtpParameters.Type {
 
 		case 'svc': {
 			return FbsRtpParameters.Type.SVC;
+		}
+
+		default: {
+			throw new TypeError(`invalid ProducerType: ${type}`);
 		}
 	}
 }

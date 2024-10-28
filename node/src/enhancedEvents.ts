@@ -25,9 +25,8 @@ export class EnhancedEventEmitter<
 			return super.emit(eventName, ...args);
 		} catch (error) {
 			enhancedEventEmitterLogger.error(
-				'safeEmit() | event listener threw an error [eventName:%s]:%o',
-				eventName,
-				error
+				`safeEmit() | event listener threw an error [eventName:${eventName}]:`,
+				error as Error
 			);
 
 			try {
@@ -113,10 +112,12 @@ export class EnhancedEventEmitter<
 		return super.listenerCount(eventName);
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
 	listeners<K extends keyof E & string>(eventName: K): Function[] {
 		return super.listeners(eventName);
 	}
 
+	// eslint-disable-next-line @typescript-eslint/no-unsafe-function-type
 	rawListeners<K extends keyof E & string>(eventName: K): Function[] {
 		return super.rawListeners(eventName);
 	}

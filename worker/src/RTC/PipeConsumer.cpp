@@ -4,6 +4,7 @@
 #include "RTC/PipeConsumer.hpp"
 #include "Logger.hpp"
 #include "MediaSoupErrors.hpp"
+#include "Utils.hpp"
 #include "RTC/Codecs/Tools.hpp"
 
 namespace RTC
@@ -250,24 +251,24 @@ namespace RTC
 		auto& syncRequired  = this->mapRtpStreamSyncRequired.at(rtpStream);
 		auto& rtpSeqManager = this->mapRtpStreamRtpSeqManager.at(rtpStream);
 
-		// Packets with only padding are not forwarded.
-		if (packet->GetPayloadLength() == 0)
-		{
-			rtpSeqManager.Drop(packet->GetSequenceNumber());
-
-#ifdef MS_RTC_LOGGER_RTP
-			packet->logger.Dropped(RtcLogger::RtpPacket::DropReason::EMPTY_PAYLOAD);
-#endif
-
-			return;
-		}
-
 		// If we need to sync, support key frames and this is not a key frame, ignore
 		// the packet.
 		if (syncRequired && this->keyFrameSupported && !packet->IsKeyFrame())
 		{
 #ifdef MS_RTC_LOGGER_RTP
 			packet->logger.Dropped(RtcLogger::RtpPacket::DropReason::NOT_A_KEYFRAME);
+#endif
+
+			return;
+		}
+
+		// Packets with only padding are not forwarded.
+		if (packet->GetPayloadLength() == 0)
+		{
+			rtpSeqManager->Drop(packet->GetSequenceNumber());
+
+#ifdef MS_RTC_LOGGER_RTP
+			packet->logger.Dropped(RtcLogger::RtpPacket::DropReason::EMPTY_PAYLOAD);
 #endif
 
 			return;
@@ -284,7 +285,7 @@ namespace RTC
 				MS_DEBUG_TAG(rtp, "sync key frame received");
 			}
 
-			rtpSeqManager.Sync(packet->GetSequenceNumber() - 1);
+			rtpSeqManager->Sync(packet->GetSequenceNumber() - 1);
 
 			syncRequired = false;
 		}
@@ -292,7 +293,7 @@ namespace RTC
 		// Update RTP seq number and timestamp.
 		uint16_t seq;
 
-		rtpSeqManager.Input(packet->GetSequenceNumber(), seq);
+		rtpSeqManager->Input(packet->GetSequenceNumber(), seq);
 
 		// Save original packet fields.
 		auto origSsrc = packet->GetSsrc();
@@ -680,7 +681,15 @@ namespace RTC
 			this->mapMappedSsrcSsrc[consumableEncoding.ssrc] = encoding.ssrc;
 			this->mapSsrcRtpStream[encoding.ssrc]            = rtpStream;
 			this->mapRtpStreamSyncRequired[rtpStream]        = false;
-			this->mapRtpStreamRtpSeqManager[rtpStream];
+
+			// Let's choose an initial output seq number between 1000 and 32768 to avoid
+			// libsrtp bug:
+			// https://github.com/versatica/mediasoup/issues/1437
+			const uint16_t initialOutputSeq =
+			  Utils::Crypto::GetRandomUInt(1000u, std::numeric_limits<uint16_t>::max() / 2);
+
+			this->mapRtpStreamRtpSeqManager[rtpStream].reset(
+			  new RTC::SeqManager<uint16_t>(initialOutputSeq));
 		}
 	}
 

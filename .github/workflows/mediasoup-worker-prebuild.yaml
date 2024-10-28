@@ -19,20 +19,25 @@ jobs:
             cc: gcc
             cxx: g++
           # Worker prebuild for Linux with kernel version 6 Ubuntu (22.04).
+          # Let's not use Ubutu 24.04 to avoid same potential problem as described
+          # above.
           - os: ubuntu-22.04
             cc: gcc
             cxx: g++
-          - os: macos-12
+          - os: macos-13
             cc: clang
             cxx: clang++
           - os: macos-14
+            cc: clang
+            cxx: clang++
+          - os: macos-15
             cc: clang
             cxx: clang++
           - os: windows-2022
             cc: cl
             cxx: cl
         node:
-          - 20
+          - 22
 
     runs-on: ${{ matrix.build.os }}
 

@@ -1,7 +1,12 @@
 import { pickPort } from 'pick-port';
 import * as mediasoup from '../';
 import { enhancedOnce } from '../enhancedEvents';
-import { WorkerEvents, ConsumerEvents, DataConsumerEvents } from '../types';
+import {
+	WorkerEvents,
+	ConsumerEvents,
+	ProducerObserverEvents,
+	DataConsumerEvents,
+} from '../types';
 import * as utils from '../utils';
 
 type TestContext = {
@@ -266,6 +271,12 @@ test('router.pipeToRouter() succeeds with audio', async () => {
 			encrypt: false,
 			parameters: {},
 		},
+		{
+			uri: 'http://www.webrtc.org/experiments/rtp-hdrext/playout-delay',
+			id: 14,
+			encrypt: false,
+			parameters: {},
+		},
 	]);
 	expect(pipeConsumer.type).toBe('pipe');
 	expect(pipeConsumer.paused).toBe(false);
@@ -305,6 +316,12 @@ test('router.pipeToRouter() succeeds with audio', async () => {
 		{
 			uri: 'http://www.webrtc.org/experiments/rtp-hdrext/abs-capture-time',
 			id: 13,
+			encrypt: false,
+			parameters: {},
+		},
+		{
+			uri: 'http://www.webrtc.org/experiments/rtp-hdrext/playout-delay',
+			id: 14,
 			encrypt: false,
 			parameters: {},
 		},
@@ -382,6 +399,12 @@ test('router.pipeToRouter() succeeds with video', async () => {
 			encrypt: false,
 			parameters: {},
 		},
+		{
+			uri: 'http://www.webrtc.org/experiments/rtp-hdrext/playout-delay',
+			id: 14,
+			encrypt: false,
+			parameters: {},
+		},
 	]);
 
 	expect(pipeConsumer.type).toBe('pipe');
@@ -443,12 +466,18 @@ test('router.pipeToRouter() succeeds with video', async () => {
 			encrypt: false,
 			parameters: {},
 		},
+		{
+			uri: 'http://www.webrtc.org/experiments/rtp-hdrext/playout-delay',
+			id: 14,
+			encrypt: false,
+			parameters: {},
+		},
 	]);
 	expect(pipeProducer.paused).toBe(true);
 }, 2000);
 
 test('router.createPipeTransport() with wrong arguments rejects with TypeError', async () => {
-	// @ts-ignore
+	// @ts-expect-error --- Testing purposes.
 	await expect(ctx.router1!.createPipeTransport({})).rejects.toThrow(TypeError);
 
 	await expect(
@@ -466,7 +495,7 @@ test('router.createPipeTransport() with wrong arguments rejects with TypeError',
 	).rejects.toThrow(TypeError);
 
 	await expect(
-		// @ts-ignore
+		// @ts-expect-error --- Testing purposes.
 		ctx.router1!.createPipeTransport({ listenIp: ['127.0.0.1'] })
 	).rejects.toThrow(TypeError);
 
@@ -479,7 +508,7 @@ test('router.createPipeTransport() with wrong arguments rejects with TypeError',
 	await expect(
 		ctx.router1!.createPipeTransport({
 			listenInfo: { protocol: 'udp', ip: '127.0.0.1' },
-			// @ts-ignore
+			// @ts-expect-error --- Testing purposes.
 			appData: 'NOT-AN-OBJECT',
 		})
 	).rejects.toThrow(TypeError);
@@ -556,6 +585,12 @@ test('router.createPipeTransport() with enableRtx succeeds', async () => {
 			encrypt: false,
 			parameters: {},
 		},
+		{
+			uri: 'http://www.webrtc.org/experiments/rtp-hdrext/playout-delay',
+			id: 14,
+			encrypt: false,
+			parameters: {},
+		},
 	]);
 
 	expect(pipeConsumer.type).toBe('pipe');
@@ -623,7 +658,7 @@ test('pipeTransport.connect() with srtpParameters fails if enableSrtp is unset',
 		pipeTransport.connect({
 			ip: '127.0.0.2',
 			port: 9999,
-			// @ts-ignore
+			// @ts-expect-error --- Testing purposes.
 			srtpParameters: 'invalid',
 		})
 	).rejects.toThrow(TypeError);
@@ -653,7 +688,7 @@ test('pipeTransport.connect() with invalid srtpParameters fails', async () => {
 		pipeTransport.connect({
 			ip: '127.0.0.2',
 			port: 9999,
-			// @ts-ignore
+			// @ts-expect-error --- Testing purposes.
 			srtpParameters: 1,
 		})
 	).rejects.toThrow(TypeError);
@@ -663,7 +698,7 @@ test('pipeTransport.connect() with invalid srtpParameters fails', async () => {
 		pipeTransport.connect({
 			ip: '127.0.0.2',
 			port: 9999,
-			// @ts-ignore
+			// @ts-expect-error --- Testing purposes.
 			srtpParameters: {
 				keyBase64:
 					'YTdjcDBvY2JoMGY5YXNlNDc0eDJsdGgwaWRvNnJsamRrdG16aWVpZHphdHo=',
@@ -676,7 +711,7 @@ test('pipeTransport.connect() with invalid srtpParameters fails', async () => {
 		pipeTransport.connect({
 			ip: '127.0.0.2',
 			port: 9999,
-			// @ts-ignore
+			// @ts-expect-error --- Testing purposes.
 			srtpParameters: {
 				cryptoSuite: 'AEAD_AES_256_GCM',
 			},
@@ -689,7 +724,7 @@ test('pipeTransport.connect() with invalid srtpParameters fails', async () => {
 			ip: '127.0.0.2',
 			port: 9999,
 			srtpParameters: {
-				// @ts-ignore
+				// @ts-expect-error --- Testing purposes.
 				cryptoSuite: 'FOO',
 				keyBase64:
 					'YTdjcDBvY2JoMGY5YXNlNDc0eDJsdGgwaWRvNnJsamRrdG16aWVpZHphdHo=',
@@ -703,7 +738,7 @@ test('pipeTransport.connect() with invalid srtpParameters fails', async () => {
 			ip: '127.0.0.2',
 			port: 9999,
 			srtpParameters: {
-				// @ts-ignore
+				// @ts-expect-error --- Testing purposes.
 				cryptoSuite: 123,
 				keyBase64:
 					'YTdjcDBvY2JoMGY5YXNlNDc0eDJsdGgwaWRvNnJsamRrdG16aWVpZHphdHo=',
@@ -718,7 +753,7 @@ test('pipeTransport.connect() with invalid srtpParameters fails', async () => {
 			port: 9999,
 			srtpParameters: {
 				cryptoSuite: 'AEAD_AES_256_GCM',
-				// @ts-ignore
+				// @ts-expect-error --- Testing purposes.
 				keyBase64: [],
 			},
 		})
@@ -809,7 +844,13 @@ test('transport.consume() for a pipe Producer succeeds', async () => {
 
 test('producer.pause() and producer.resume() are transmitted to pipe Consumer', async () => {
 	await ctx.videoProducer!.pause();
-	await ctx.router1!.pipeToRouter({
+
+	// We need to obtain the pipeProducer to await for its 'puase' and 'resume'
+	// events, otherwise we may get errors like this:
+	// InvalidStateError: Channel closed, pending request aborted [method:PRODUCER_PAUSE, id:8]
+	// See related fixed issue:
+	// https://github.com/versatica/mediasoup/issues/1374
+	const { pipeProducer: pipeVideoProducer } = await ctx.router1!.pipeToRouter({
 		producerId: ctx.videoProducer!.id,
 		router: ctx.router2!,
 	});
@@ -829,20 +870,30 @@ test('producer.pause() and producer.resume() are transmitted to pipe Consumer', 
 		videoConsumer,
 		'producerresume'
 	);
+	const promise2 = enhancedOnce<ProducerObserverEvents>(
+		pipeVideoProducer!.observer,
+		'resume'
+	);
 
 	await ctx.videoProducer!.resume();
-	await promise1;
+	await Promise.all([promise1, promise2]);
 
 	expect(videoConsumer.producerPaused).toBe(false);
 	expect(videoConsumer.paused).toBe(false);
+	expect(pipeVideoProducer!.paused).toBe(false);
 
-	const promise2 = enhancedOnce<ConsumerEvents>(videoConsumer, 'producerpause');
+	const promise3 = enhancedOnce<ConsumerEvents>(videoConsumer, 'producerpause');
+	const promise4 = enhancedOnce<ProducerObserverEvents>(
+		pipeVideoProducer!.observer,
+		'pause'
+	);
 
 	await ctx.videoProducer!.pause();
-	await promise2;
+	await Promise.all([promise3, promise4]);
 
 	expect(videoConsumer.producerPaused).toBe(true);
 	expect(videoConsumer.paused).toBe(false);
+	expect(pipeVideoProducer!.paused).toBe(true);
 }, 2000);
 
 test('producer.close() is transmitted to pipe Consumer', async () => {
@@ -856,7 +907,7 @@ test('producer.close() is transmitted to pipe Consumer', async () => {
 		rtpCapabilities: ctx.consumerDeviceCapabilities,
 	});
 
-	await ctx.videoProducer!.close();
+	ctx.videoProducer!.close();
 
 	expect(ctx.videoProducer!.closed).toBe(true);
 
@@ -959,7 +1010,7 @@ test('dataProducer.close() is transmitted to pipe DataConsumer', async () => {
 		dataProducerId: ctx.dataProducer!.id,
 	});
 
-	await ctx.dataProducer!.close();
+	ctx.dataProducer!.close();
 
 	expect(ctx.dataProducer!.closed).toBe(true);
 

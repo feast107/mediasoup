@@ -1,3 +1,9 @@
+export type { Observer, ObserverEvents, LogEventListeners } from './index';
+export type * from './RtpParameters';
+export type * from './SctpParameters';
+export type * from './SrtpParameters';
+export type * from './scalabilityModes';
+
 export * from './Worker';
 export * from './WebRtcServer';
 export * from './Router';
@@ -13,11 +19,7 @@ export * from './DataConsumer';
 export * from './RtpObserver';
 export * from './ActiveSpeakerObserver';
 export * from './AudioLevelObserver';
-export * from './RtpParameters';
-export * from './SctpParameters';
-export * from './SrtpParameters';
 export * from './errors';
-export type { ScalabilityMode } from './scalabilityModes';
 
 export type AppData = {
 	[key: string]: unknown;

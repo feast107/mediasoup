@@ -50,7 +50,7 @@ PIP_PYLINT_DIR = f'{MEDIASOUP_OUT_DIR}/pip_pylint';
 NUM_CORES = len(os.sched_getaffinity(0)) if hasattr(os, 'sched_getaffinity') else os.cpu_count();
 PYTHON = os.getenv('PYTHON') or sys.executable;
 MESON = os.getenv('MESON') or f'{PIP_MESON_NINJA_DIR}/bin/meson';
-MESON_VERSION = os.getenv('MESON_VERSION') or '1.3.0';
+MESON_VERSION = os.getenv('MESON_VERSION') or '1.5.0';
 # MESON_ARGS can be used to provide extra configuration parameters to meson,
 # such as adding defines or changing optimization options. For instance, use
 # `MESON_ARGS="-Dms_log_trace=true -Dms_log_file_line=true" npm i` to compile
@@ -61,7 +61,6 @@ MESON_ARGS = os.getenv('MESON_ARGS') if os.getenv('MESON_ARGS') else '--vsenv' i
 # Let's use a specific version of ninja to avoid buggy version 1.11.1:
 # https://mediasoup.discourse.group/t/partly-solved-could-not-detect-ninja-v1-8-2-or-newer/
 # https://github.com/ninja-build/ninja/issues/2211
-# https://github.com/ninja-build/ninja/issues/2212
 NINJA_VERSION = os.getenv('NINJA_VERSION') or '1.10.2.4';
 PYLINT_VERSION = os.getenv('PYLINT_VERSION') or '3.0.2';
 NPM = os.getenv('NPM') or 'npm';
@@ -389,21 +388,21 @@ def test(ctx):
         );
 
 
-@task(pre=[setup, flatc])
-def test_asan(ctx):
+@task(pre=[call(setup, meson_args=MESON_ARGS + ' -Db_sanitize=address -Db_lundef=false'), flatc])
+def test_asan_address(ctx):
     """
-    Run worker test with Address Sanitizer
+    Run worker test with Address Sanitizer with '-fsanitize=address'
     """
     with ctx.cd(f'"{WORKER_DIR}"'):
         ctx.run(
-            f'"{MESON}" compile -C "{BUILD_DIR}" -j {NUM_CORES} mediasoup-worker-test-asan',
+            f'"{MESON}" compile -C "{BUILD_DIR}" -j {NUM_CORES} mediasoup-worker-test-asan-address',
             echo=True,
             pty=PTY_SUPPORTED,
             shell=SHELL
         );
     with ctx.cd(f'"{WORKER_DIR}"'):
         ctx.run(
-            f'"{MESON}" install -C "{BUILD_DIR}" --no-rebuild --tags mediasoup-worker-test-asan',
+            f'"{MESON}" install -C "{BUILD_DIR}" --no-rebuild --tags mediasoup-worker-test-asan-address',
             echo=True,
             pty=PTY_SUPPORTED,
             shell=SHELL
@@ -413,7 +412,69 @@ def test_asan(ctx):
 
     with ctx.cd(f'"{WORKER_DIR}"'):
         ctx.run(
-            f'ASAN_OPTIONS=detect_leaks=1 "{BUILD_DIR}/mediasoup-worker-test-asan" --invisibles --use-colour=yes {mediasoup_test_tags}',
+            f'ASAN_OPTIONS=detect_leaks=1 "{BUILD_DIR}/mediasoup-worker-test-asan-address" --invisibles {mediasoup_test_tags}',
+            echo=True,
+            pty=PTY_SUPPORTED,
+            shell=SHELL
+        );
+
+
+@task(pre=[call(setup, meson_args=MESON_ARGS + ' -Db_sanitize=undefined -Db_lundef=false'), flatc])
+def test_asan_undefined(ctx):
+    """
+    Run worker test with undefined Sanitizer with -fsanitize=undefined
+    """
+    with ctx.cd(f'"{WORKER_DIR}"'):
+        ctx.run(
+            f'"{MESON}" compile -C "{BUILD_DIR}" -j {NUM_CORES} mediasoup-worker-test-asan-undefined',
+            echo=True,
+            pty=PTY_SUPPORTED,
+            shell=SHELL
+        );
+    with ctx.cd(f'"{WORKER_DIR}"'):
+        ctx.run(
+            f'"{MESON}" install -C "{BUILD_DIR}" --no-rebuild --tags mediasoup-worker-test-asan-undefined',
+            echo=True,
+            pty=PTY_SUPPORTED,
+            shell=SHELL
+        );
+
+    mediasoup_test_tags = os.getenv('MEDIASOUP_TEST_TAGS') or '';
+
+    with ctx.cd(f'"{WORKER_DIR}"'):
+        ctx.run(
+            f'ASAN_OPTIONS=detect_leaks=1 "{BUILD_DIR}/mediasoup-worker-test-asan-undefined" --invisibles {mediasoup_test_tags}',
+            echo=True,
+            pty=PTY_SUPPORTED,
+            shell=SHELL
+        );
+
+
+@task(pre=[call(setup, meson_args=MESON_ARGS + ' -Db_sanitize=thread -Db_lundef=false'), flatc])
+def test_asan_thread(ctx):
+    """
+    Run worker test with thread Sanitizer with -fsanitize=thread
+    """
+    with ctx.cd(f'"{WORKER_DIR}"'):
+        ctx.run(
+            f'"{MESON}" compile -C "{BUILD_DIR}" -j {NUM_CORES} mediasoup-worker-test-asan-thread',
+            echo=True,
+            pty=PTY_SUPPORTED,
+            shell=SHELL
+        );
+    with ctx.cd(f'"{WORKER_DIR}"'):
+        ctx.run(
+            f'"{MESON}" install -C "{BUILD_DIR}" --no-rebuild --tags mediasoup-worker-test-asan-thread',
+            echo=True,
+            pty=PTY_SUPPORTED,
+            shell=SHELL
+        );
+
+    mediasoup_test_tags = os.getenv('MEDIASOUP_TEST_TAGS') or '';
+
+    with ctx.cd(f'"{WORKER_DIR}"'):
+        ctx.run(
+            f'ASAN_OPTIONS=detect_leaks=1 "{BUILD_DIR}/mediasoup-worker-test-asan-thread" --invisibles {mediasoup_test_tags}',
             echo=True,
             pty=PTY_SUPPORTED,
             shell=SHELL
@@ -449,7 +510,7 @@ def tidy(ctx):
         );
 
 
-@task(pre=[call(setup, meson_args=MESON_ARGS + ' -Db_sanitize=address'), flatc])
+@task(pre=[call(setup, meson_args=MESON_ARGS + ' -Db_sanitize=address -Db_lundef=false'), flatc])
 def fuzzer(ctx):
     """
     Build the mediasoup-worker-fuzzer binary (which uses libFuzzer)

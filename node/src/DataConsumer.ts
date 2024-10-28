@@ -92,6 +92,9 @@ export type DataConsumerEvents = {
 	'@dataproducerclose': [];
 };
 
+export type DataConsumerObserver =
+	EnhancedEventEmitter<DataConsumerObserverEvents>;
+
 export type DataConsumerObserverEvents = {
 	close: [];
 	pause: [];
@@ -148,7 +151,8 @@ export class DataConsumer<
 	#appData: DataConsumerAppData;
 
 	// Observer instance.
-	readonly #observer = new EnhancedEventEmitter<DataConsumerObserverEvents>();
+	readonly #observer: DataConsumerObserver =
+		new EnhancedEventEmitter<DataConsumerObserverEvents>();
 
 	/**
 	 * @private
@@ -180,7 +184,7 @@ export class DataConsumer<
 		this.#paused = paused;
 		this.#dataProducerPaused = dataProducerPaused;
 		this.#subchannels = subchannels;
-		this.#appData = appData || ({} as DataConsumerAppData);
+		this.#appData = appData ?? ({} as DataConsumerAppData);
 
 		this.handleWorkerNotifications();
 	}
@@ -272,7 +276,7 @@ export class DataConsumer<
 	/**
 	 * Observer.
 	 */
-	get observer(): EnhancedEventEmitter<DataConsumerObserverEvents> {
+	get observer(): DataConsumerObserver {
 		return this.#observer;
 	}
 
@@ -426,7 +430,7 @@ export class DataConsumer<
 	 * Set buffered amount low threshold.
 	 */
 	async setBufferedAmountLowThreshold(threshold: number): Promise<void> {
-		logger.debug('setBufferedAmountLowThreshold() [threshold:%s]', threshold);
+		logger.debug(`setBufferedAmountLowThreshold() [threshold:${threshold}]`);
 
 		/* Build Request. */
 		const requestOffset =
@@ -710,10 +714,7 @@ export class DataConsumer<
 					}
 
 					default: {
-						logger.error(
-							'ignoring unknown event "%s" in channel listener',
-							event
-						);
+						logger.error(`ignoring unknown event "${event}"`);
 					}
 				}
 			}

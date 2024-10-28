@@ -84,6 +84,11 @@ export type WorkerSettings<WorkerAppData extends AppData = AppData> = {
 	libwebrtcFieldTrials?: string;
 
 	/**
+	 * Disable liburing (io_uring) despite it's supported in current host.
+	 */
+	disableLiburing?: boolean;
+
+	/**
 	 * Custom application data.
 	 */
 	appData?: WorkerAppData;
@@ -101,8 +106,6 @@ export type WorkerUpdateableSettings<T extends AppData = AppData> = Pick<
  * - https://linux.die.net/man/2/getrusage
  */
 export type WorkerResourceUsage = {
-	/* eslint-disable camelcase */
-
 	/**
 	 * User CPU time used (in ms).
 	 */
@@ -182,8 +185,6 @@ export type WorkerResourceUsage = {
 	 * Involuntary context switches.
 	 */
 	ru_nivcsw: number;
-
-	/* eslint-enable camelcase */
 };
 
 export type WorkerDump = {
@@ -209,6 +210,8 @@ export type WorkerEvents = {
 	'@success': [];
 	'@failure': [Error];
 };
+
+export type WorkerObserver = EnhancedEventEmitter<WorkerObserverEvents>;
 
 export type WorkerObserverEvents = {
 	close: [];
@@ -275,7 +278,8 @@ export class Worker<
 	readonly #routers: Set<Router> = new Set();
 
 	// Observer instance.
-	readonly #observer = new EnhancedEventEmitter<WorkerObserverEvents>();
+	readonly #observer: WorkerObserver =
+		new EnhancedEventEmitter<WorkerObserverEvents>();
 
 	/**
 	 * @private
@@ -288,6 +292,7 @@ export class Worker<
 		dtlsCertificateFile,
 		dtlsPrivateKeyFile,
 		libwebrtcFieldTrials,
+		disableLiburing,
 		appData,
 	}: WorkerSettings<WorkerAppData>) {
 		super();
@@ -298,7 +303,7 @@ export class Worker<
 		let spawnArgs: string[] = [];
 
 		if (process.env.MEDIASOUP_USE_VALGRIND === 'true') {
-			spawnBin = process.env.MEDIASOUP_VALGRIND_BIN || 'valgrind';
+			spawnBin = process.env.MEDIASOUP_VALGRIND_BIN ?? 'valgrind';
 
 			if (process.env.MEDIASOUP_VALGRIND_OPTIONS) {
 				spawnArgs = spawnArgs.concat(
@@ -339,11 +344,11 @@ export class Worker<
 			spawnArgs.push(`--libwebrtcFieldTrials=${libwebrtcFieldTrials}`);
 		}
 
-		logger.debug(
-			'spawning worker process: %s %s',
-			spawnBin,
-			spawnArgs.join(' ')
-		);
+		if (disableLiburing) {
+			spawnArgs.push(`--disableLiburing=true`);
+		}
+
+		logger.debug(`spawning worker process: ${spawnBin} ${spawnArgs.join(' ')}`);
 
 		this.#child = spawn(
 			// command
@@ -380,7 +385,7 @@ export class Worker<
 			pid: this.#pid,
 		});
 
-		this.#appData = appData || ({} as WorkerAppData);
+		this.#appData = appData ?? ({} as WorkerAppData);
 
 		let spawnDone = false;
 
@@ -389,7 +394,7 @@ export class Worker<
 			if (!spawnDone && event === Event.WORKER_RUNNING) {
 				spawnDone = true;
 
-				logger.debug('worker process running [pid:%s]', this.#pid);
+				logger.debug(`worker process running [pid:${this.#pid}]`);
 
 				this.emit('@success');
 			}
@@ -406,18 +411,14 @@ export class Worker<
 
 				if (code === 42) {
 					logger.error(
-						'worker process failed due to wrong settings [pid:%s]',
-						this.#pid
+						`worker process failed due to wrong settings [pid:${this.#pid}]`
 					);
 
 					this.close();
 					this.emit('@failure', new TypeError('wrong settings'));
 				} else {
 					logger.error(
-						'worker process failed unexpectedly [pid:%s, code:%s, signal:%s]',
-						this.#pid,
-						code,
-						signal
+						`worker process failed unexpectedly [pid:${this.#pid}, code:${code}, signal:${signal}]`
 					);
 
 					this.close();
@@ -428,10 +429,7 @@ export class Worker<
 				}
 			} else {
 				logger.error(
-					'worker process died unexpectedly [pid:%s, code:%s, signal:%s]',
-					this.#pid,
-					code,
-					signal
+					`worker process died unexpectedly [pid:${this.#pid}, code:${code}, signal:${signal}]`
 				);
 
 				this.workerDied(
@@ -450,18 +448,14 @@ export class Worker<
 				spawnDone = true;
 
 				logger.error(
-					'worker process failed [pid:%s]: %s',
-					this.#pid,
-					error.message
+					`worker process failed [pid:${this.#pid}]: ${error.message}`
 				);
 
 				this.close();
 				this.emit('@failure', error);
 			} else {
 				logger.error(
-					'worker process error [pid:%s]: %s',
-					this.#pid,
-					error.message
+					`worker process error [pid:${this.#pid}]: ${error.message}`
 				);
 
 				this.workerDied(error);
@@ -470,10 +464,7 @@ export class Worker<
 
 		this.#child.on('close', (code, signal) => {
 			logger.debug(
-				'worker subprocess closed [pid:%s, code:%s, signal:%s]',
-				this.#pid,
-				code,
-				signal
+				`worker subprocess closed [pid:${this.#pid}, code:${code}, signal:${signal}]`
 			);
 
 			this.#subprocessClosed = true;
@@ -545,7 +536,7 @@ export class Worker<
 	/**
 	 * Observer.
 	 */
-	get observer(): EnhancedEventEmitter<WorkerObserverEvents> {
+	get observer(): WorkerObserver {
 		return this.#observer;
 	}
 
@@ -633,7 +624,6 @@ export class Worker<
 
 		const ru = resourceUsage.unpack();
 
-		/* eslint-disable camelcase */
 		return {
 			ru_utime: Number(ru.ruUtime),
 			ru_stime: Number(ru.ruStime),
@@ -652,7 +642,6 @@ export class Worker<
 			ru_nvcsw: Number(ru.ruNvcsw),
 			ru_nivcsw: Number(ru.ruNivcsw),
 		};
-		/* eslint-enable camelcase */
 	}
 
 	/**
@@ -726,7 +715,7 @@ export class Worker<
 			createWebRtcServerRequestOffset
 		);
 
-		const webRtcServer = new WebRtcServer<WebRtcServerAppData>({
+		const webRtcServer: WebRtcServer<WebRtcServerAppData> = new WebRtcServer({
 			internal: { webRtcServerId },
 			channel: this.#channel,
 			appData,
@@ -777,7 +766,7 @@ export class Worker<
 		);
 
 		const data = { rtpCapabilities };
-		const router = new Router<RouterAppData>({
+		const router: Router<RouterAppData> = new Router({
 			internal: {
 				routerId,
 			},
@@ -800,7 +789,7 @@ export class Worker<
 			return;
 		}
 
-		logger.debug(`died() [error:${error}]`);
+		logger.debug(`died() [error:${error.toString()}]`);
 
 		this.#closed = true;
 		this.#died = true;
@@ -831,7 +820,7 @@ export function parseWorkerDumpResponse(
 	binary: FbsWorker.DumpResponse
 ): WorkerDump {
 	const dump: WorkerDump = {
-		pid: binary.pid()!,
+		pid: binary.pid(),
 		webRtcServerIds: utils.parseVector(binary, 'webRtcServerIds'),
 		routerIds: utils.parseVector(binary, 'routerIds'),
 		channelMessageHandlers: {

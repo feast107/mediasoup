@@ -223,6 +223,8 @@ export type TransportEvents = {
 	'@listenserverclose': [];
 };
 
+export type TransportObserver = EnhancedEventEmitter<TransportObserverEvents>;
+
 export type TransportObserverEvents = {
 	close: [];
 	newproducer: [Producer];
@@ -317,10 +319,10 @@ type RecvRtpHeaderExtensions = {
 
 const logger = new Logger('Transport');
 
-export class Transport<
+export abstract class Transport<
 	TransportAppData extends AppData = AppData,
 	Events extends TransportEvents = TransportEvents,
-	ObserverEvents extends TransportObserverEvents = TransportObserverEvents,
+	Observer extends TransportObserver = TransportObserver,
 > extends EnhancedEventEmitter<Events> {
 	// Internal data.
 	protected readonly internal: TransportInternal;
@@ -375,21 +377,24 @@ export class Transport<
 	#nextSctpStreamId = 0;
 
 	// Observer instance.
-	readonly #observer = new EnhancedEventEmitter<ObserverEvents>();
+	readonly #observer: Observer;
 
 	/**
 	 * @private
 	 * @interface
 	 */
-	constructor({
-		internal,
-		data,
-		channel,
-		appData,
-		getRouterRtpCapabilities,
-		getProducerById,
-		getDataProducerById,
-	}: TransportConstructorOptions<TransportAppData>) {
+	constructor(
+		{
+			internal,
+			data,
+			channel,
+			appData,
+			getRouterRtpCapabilities,
+			getProducerById,
+			getDataProducerById,
+		}: TransportConstructorOptions<TransportAppData>,
+		observer: Observer
+	) {
 		super();
 
 		logger.debug('constructor()');
@@ -397,10 +402,11 @@ export class Transport<
 		this.internal = internal;
 		this.#data = data;
 		this.channel = channel;
-		this.#appData = appData || ({} as TransportAppData);
+		this.#appData = appData ?? ({} as TransportAppData);
 		this.#getRouterRtpCapabilities = getRouterRtpCapabilities;
 		this.getProducerById = getProducerById;
 		this.getDataProducerById = getDataProducerById;
+		this.#observer = observer;
 	}
 
 	/**
@@ -434,7 +440,7 @@ export class Transport<
 	/**
 	 * Observer.
 	 */
-	get observer(): EnhancedEventEmitter<ObserverEvents> {
+	get observer(): Observer {
 		return this.#observer;
 	}
 
@@ -629,6 +635,7 @@ export class Transport<
 	 *
 	 * @abstract
 	 */
+	// eslint-disable-next-line @typescript-eslint/require-await
 	async dump(): Promise<any> {
 		// Should not happen.
 		throw new Error('method implemented in the subclass');
@@ -639,6 +646,7 @@ export class Transport<
 	 *
 	 * @abstract
 	 */
+	// eslint-disable-next-line @typescript-eslint/require-await
 	async getStats(): Promise<any[]> {
 		// Should not happen.
 		throw new Error('method implemented in the subclass');
@@ -649,7 +657,7 @@ export class Transport<
 	 *
 	 * @abstract
 	 */
-	// eslint-disable-next-line @typescript-eslint/no-unused-vars
+	// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
 	async connect(params: any): Promise<void> {
 		// Should not happen.
 		throw new Error('method implemented in the subclass');
@@ -659,7 +667,7 @@ export class Transport<
 	 * Set maximum incoming bitrate for receiving media.
 	 */
 	async setMaxIncomingBitrate(bitrate: number): Promise<void> {
-		logger.debug('setMaxIncomingBitrate() [bitrate:%s]', bitrate);
+		logger.debug(`setMaxIncomingBitrate() [bitrate:${bitrate}]`);
 
 		/* Build Request. */
 		const requestOffset =
@@ -680,7 +688,7 @@ export class Transport<
 	 * Set maximum outgoing bitrate for sending media.
 	 */
 	async setMaxOutgoingBitrate(bitrate: number): Promise<void> {
-		logger.debug('setMaxOutgoingBitrate() [bitrate:%s]', bitrate);
+		logger.debug(`setMaxOutgoingBitrate() [bitrate:${bitrate}]`);
 
 		/* Build Request. */
 		const requestOffset = new FbsTransport.SetMaxOutgoingBitrateRequestT(
@@ -699,7 +707,7 @@ export class Transport<
 	 * Set minimum outgoing bitrate for sending media.
 	 */
 	async setMinOutgoingBitrate(bitrate: number): Promise<void> {
-		logger.debug('setMinOutgoingBitrate() [bitrate:%s]', bitrate);
+		logger.debug(`setMinOutgoingBitrate() [bitrate:${bitrate}]`);
 
 		/* Build Request. */
 		const requestOffset = new FbsTransport.SetMinOutgoingBitrateRequestT(
@@ -755,11 +763,7 @@ export class Transport<
 		if (this.constructor.name !== 'PipeTransport') {
 			// If CNAME is given and we don't have yet a CNAME for Producers in this
 			// Transport, take it.
-			if (
-				!this.#cnameForProducers &&
-				clonedRtpParameters.rtcp &&
-				clonedRtpParameters.rtcp.cname
-			) {
+			if (!this.#cnameForProducers && clonedRtpParameters.rtcp?.cname) {
 				this.#cnameForProducers = clonedRtpParameters.rtcp.cname;
 			}
 			// Otherwise if we don't have yet a CNAME for Producers and the RTP
@@ -789,7 +793,7 @@ export class Transport<
 			rtpMapping
 		);
 
-		const producerId = id || utils.generateUUIDv4();
+		const producerId = id ?? utils.generateUUIDv4();
 		const requestOffset = createProduceRequest({
 			builder: this.channel.bufferBuilder,
 			producerId,
@@ -821,7 +825,7 @@ export class Transport<
 			consumableRtpParameters,
 		};
 
-		const producer = new Producer<ProducerAppData>({
+		const producer: Producer<ProducerAppData> = new Producer({
 			internal: {
 				...this.internal,
 				producerId,
@@ -948,7 +952,7 @@ export class Transport<
 			type: pipe ? 'pipe' : (producer.type as ConsumerType),
 		};
 
-		const consumer = new Consumer<ConsumerAppData>({
+		const consumer: Consumer<ConsumerAppData> = new Consumer({
 			internal: {
 				...this.internal,
 				consumerId,
@@ -962,10 +966,7 @@ export class Transport<
 			preferredLayers: status.preferredLayers
 				? {
 						spatialLayer: status.preferredLayers.spatialLayer,
-						temporalLayer:
-							status.preferredLayers.temporalLayer !== null
-								? status.preferredLayers.temporalLayer
-								: undefined,
+						temporalLayer: status.preferredLayers.temporalLayer ?? undefined,
 					}
 				: undefined,
 		});
@@ -1028,7 +1029,7 @@ export class Transport<
 			}
 		}
 
-		const dataProducerId = id || utils.generateUUIDv4();
+		const dataProducerId = id ?? utils.generateUUIDv4();
 		const requestOffset = createProduceDataRequest({
 			builder: this.channel.bufferBuilder,
 			dataProducerId,
@@ -1053,7 +1054,7 @@ export class Transport<
 
 		const dump = parseDataProducerDumpResponse(produceDataResponse);
 
-		const dataProducer = new DataProducer<DataProducerAppData>({
+		const dataProducer: DataProducer<DataProducerAppData> = new DataProducer({
 			internal: {
 				...this.internal,
 				dataProducerId,
@@ -1188,7 +1189,7 @@ export class Transport<
 
 		const dump = parseDataConsumerDumpResponse(consumeDataResponse);
 
-		const dataConsumer = new DataConsumer<DataConsumerAppData>({
+		const dataConsumer: DataConsumer<DataConsumerAppData> = new DataConsumer({
 			internal: {
 				...this.internal,
 				dataConsumerId,
@@ -1332,10 +1333,6 @@ export function parseSctpState(fbsSctpState: FbsSctpState): SctpState {
 
 		case FbsSctpState.CLOSED: {
 			return 'closed';
-		}
-
-		default: {
-			throw new TypeError(`invalid SctpState: ${fbsSctpState}`);
 		}
 	}
 }
@@ -1524,7 +1521,7 @@ export function parseTransportTraceEventData(
 				timestamp: Number(trace.timestamp()),
 				direction:
 					trace.direction() === FbsTraceDirection.DIRECTION_IN ? 'in' : 'out',
-				info: parseBweTraceInfo(info!),
+				info: parseBweTraceInfo(info),
 			};
 		}
 
@@ -1566,10 +1563,6 @@ function transportTraceEventTypeToFbs(
 
 		case 'bwe': {
 			return FbsTransport.TraceEventType.BWE;
-		}
-
-		default: {
-			throw new TypeError(`invalid TransportTraceEventType: ${eventType}`);
 		}
 	}
 }

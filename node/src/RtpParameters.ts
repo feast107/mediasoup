@@ -321,7 +321,8 @@ export type RtpHeaderExtensionUri =
 	| 'urn:ietf:params:rtp-hdrext:toffset'
 	| 'http://www.ietf.org/id/draft-holmer-rmcat-transport-wide-cc-extensions-01'
 	| 'http://www.webrtc.org/experiments/rtp-hdrext/abs-send-time'
-	| 'http://www.webrtc.org/experiments/rtp-hdrext/abs-capture-time';
+	| 'http://www.webrtc.org/experiments/rtp-hdrext/abs-capture-time'
+	| 'http://www.webrtc.org/experiments/rtp-hdrext/playout-delay';
 
 /**
  * Defines a RTP header extension within the RTP parameters. The list of RTP
@@ -639,8 +640,7 @@ export function parseParameters(data: any): any {
 				const value = new FbsBoolean();
 
 				fbsParameter.value(value);
-
-				parameters[String(fbsParameter.name()!)] = value.value();
+				parameters[String(fbsParameter.name())] = value.value();
 
 				break;
 			}
@@ -649,8 +649,7 @@ export function parseParameters(data: any): any {
 				const value = new FbsInteger32();
 
 				fbsParameter.value(value);
-
-				parameters[String(fbsParameter.name()!)] = value.value();
+				parameters[String(fbsParameter.name())] = value.value();
 
 				break;
 			}
@@ -659,8 +658,7 @@ export function parseParameters(data: any): any {
 				const value = new FbsDouble();
 
 				fbsParameter.value(value);
-
-				parameters[String(fbsParameter.name()!)] = value.value();
+				parameters[String(fbsParameter.name())] = value.value();
 
 				break;
 			}
@@ -669,8 +667,7 @@ export function parseParameters(data: any): any {
 				const value = new FbsString();
 
 				fbsParameter.value(value);
-
-				parameters[String(fbsParameter.name()!)] = value.value();
+				parameters[String(fbsParameter.name())] = value.value();
 
 				break;
 			}
@@ -679,8 +676,7 @@ export function parseParameters(data: any): any {
 				const value = new FbsInteger32Array();
 
 				fbsParameter.value(value);
-
-				parameters[String(fbsParameter.name()!)] = value.valueArray();
+				parameters[String(fbsParameter.name())] = value.valueArray();
 
 				break;
 			}
@@ -758,6 +754,10 @@ export function rtpHeaderExtensionUriFromFbs(
 		case FbsRtpHeaderExtensionUri.AbsCaptureTime: {
 			return 'http://www.webrtc.org/experiments/rtp-hdrext/abs-capture-time';
 		}
+
+		case FbsRtpHeaderExtensionUri.PlayoutDelay: {
+			return 'http://www.webrtc.org/experiments/rtp-hdrext/playout-delay';
+		}
 	}
 }
 
@@ -809,6 +809,10 @@ export function rtpHeaderExtensionUriToFbs(
 			return FbsRtpHeaderExtensionUri.AbsCaptureTime;
 		}
 
+		case 'http://www.webrtc.org/experiments/rtp-hdrext/playout-delay': {
+			return FbsRtpHeaderExtensionUri.PlayoutDelay;
+		}
+
 		default: {
 			throw new TypeError(`invalid RtpHeaderExtensionUri: ${uri}`);
 		}
@@ -834,7 +838,7 @@ export function parseRtpEncodingParameters(
 		rid: data.rid() ?? undefined,
 		codecPayloadType:
 			data.codecPayloadType() !== null ? data.codecPayloadType()! : undefined,
-		rtx: data.rtx() ? { ssrc: data.rtx()!.ssrc()! } : undefined,
+		rtx: data.rtx() ? { ssrc: data.rtx()!.ssrc() } : undefined,
 		dtx: data.dtx(),
 		scalabilityMode: data.scalabilityMode() ?? undefined,
 		maxBitrate: data.maxBitrate() !== null ? data.maxBitrate()! : undefined,
