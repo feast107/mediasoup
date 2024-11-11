@@ -2,9 +2,11 @@ import { pickPort } from 'pick-port';
 import * as flatbuffers from 'flatbuffers';
 import * as mediasoup from '../';
 import { enhancedOnce } from '../enhancedEvents';
-import { WorkerEvents, WebRtcTransportEvents } from '../types';
+import type { WorkerEvents, WebRtcTransportEvents } from '../types';
+import type { WebRtcTransportImpl } from '../WebRtcTransport';
+import type { TransportTuple } from '../TransportTypes';
+import { serializeProtocol } from '../Transport';
 import * as utils from '../utils';
-import { serializeProtocol, TransportTuple } from '../Transport';
 import {
 	Notification,
 	Body as NotificationBody,
@@ -123,6 +125,7 @@ test('router.createWebRtcTransport() succeeds', async () => {
 	expect(onObserverNewTransport).toHaveBeenCalledWith(webRtcTransport);
 	expect(typeof webRtcTransport.id).toBe('string');
 	expect(webRtcTransport.closed).toBe(false);
+	expect(webRtcTransport.type).toBe('webrtc');
 	expect(webRtcTransport.appData).toEqual({ foo: 'bar' });
 	expect(webRtcTransport.iceRole).toBe('controlled');
 	expect(typeof webRtcTransport.iceParameters).toBe('object');
@@ -182,7 +185,6 @@ test('router.createWebRtcTransport() succeeds', async () => {
 	const dump = await webRtcTransport.dump();
 
 	expect(dump.id).toBe(webRtcTransport.id);
-	expect(dump.direct).toBe(false);
 	expect(dump.producerIds).toEqual([]);
 	expect(dump.consumerIds).toEqual([]);
 	expect(dump.iceRole).toBe(webRtcTransport.iceRole);
@@ -620,7 +622,7 @@ test('transport.enableTraceEvent() succeed', async () => {
 		traceEventTypes: ['probation'],
 	});
 
-	await webRtcTransport.enableTraceEvent([]);
+	await webRtcTransport.enableTraceEvent();
 	await expect(webRtcTransport.dump()).resolves.toMatchObject({
 		traceEventTypes: [],
 	});
@@ -667,8 +669,8 @@ test('WebRtcTransport events succeed', async () => {
 		],
 	});
 
-	// Private API.
-	const channel = webRtcTransport.channelForTesting;
+	// API not exposed in the interface.
+	const channel = (webRtcTransport as WebRtcTransportImpl).channelForTesting;
 	const onIceStateChange = jest.fn();
 
 	webRtcTransport.on('icestatechange', onIceStateChange);

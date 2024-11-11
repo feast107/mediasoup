@@ -1,6 +1,6 @@
 import * as mediasoup from '../';
 import { enhancedOnce } from '../enhancedEvents';
-import { WorkerEvents, AudioLevelObserverEvents } from '../types';
+import type { WorkerEvents, AudioLevelObserverEvents } from '../types';
 import * as utils from '../utils';
 
 type TestContext = {
@@ -48,6 +48,7 @@ test('router.createAudioLevelObserver() succeeds', async () => {
 	expect(onObserverNewRtpObserver).toHaveBeenCalledWith(audioLevelObserver);
 	expect(typeof audioLevelObserver.id).toBe('string');
 	expect(audioLevelObserver.closed).toBe(false);
+	expect(audioLevelObserver.type).toBe('audiolevel');
 	expect(audioLevelObserver.paused).toBe(false);
 	expect(audioLevelObserver.appData).toEqual({});
 

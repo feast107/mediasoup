@@ -1,56 +1,29 @@
 import { Logger } from './Logger';
 import { EnhancedEventEmitter } from './enhancedEvents';
-import { UnsupportedError } from './errors';
+import type {
+	DirectTransport,
+	DirectTransportDump,
+	DirectTransportStat,
+	DirectTransportEvents,
+	DirectTransportObserver,
+	DirectTransportObserverEvents,
+} from './DirectTransportTypes';
+import type { Transport, BaseTransportDump } from './TransportTypes';
 import {
-	BaseTransportDump,
-	BaseTransportStats,
+	TransportImpl,
+	TransportConstructorOptions,
 	parseBaseTransportDump,
 	parseBaseTransportStats,
 	parseTransportTraceEventData,
-	Transport,
-	TransportEvents,
-	TransportObserverEvents,
-	TransportConstructorOptions,
 } from './Transport';
-import { SctpParameters } from './SctpParameters';
-import { AppData } from './types';
+import type { SctpParameters } from './sctpParametersTypes';
+import type { AppData } from './types';
+import { UnsupportedError } from './errors';
 import { Event, Notification } from './fbs/notification';
 import * as FbsDirectTransport from './fbs/direct-transport';
 import * as FbsTransport from './fbs/transport';
 import * as FbsNotification from './fbs/notification';
 import * as FbsRequest from './fbs/request';
-
-export type DirectTransportOptions<
-	DirectTransportAppData extends AppData = AppData,
-> = {
-	/**
-	 * Maximum allowed size for direct messages sent from DataProducers.
-	 * Default 262144.
-	 */
-	maxMessageSize: number;
-
-	/**
-	 * Custom application data.
-	 */
-	appData?: DirectTransportAppData;
-};
-
-export type DirectTransportDump = BaseTransportDump;
-
-export type DirectTransportStat = BaseTransportStats & {
-	type: string;
-};
-
-export type DirectTransportEvents = TransportEvents & {
-	rtcp: [Buffer];
-};
-
-export type DirectTransportObserver =
-	EnhancedEventEmitter<DirectTransportObserverEvents>;
-
-export type DirectTransportObserverEvents = TransportObserverEvents & {
-	rtcp: [Buffer];
-};
 
 type DirectTransportConstructorOptions<DirectTransportAppData> =
 	TransportConstructorOptions<DirectTransportAppData> & {
@@ -63,20 +36,20 @@ export type DirectTransportData = {
 
 const logger = new Logger('DirectTransport');
 
-export class DirectTransport<
-	DirectTransportAppData extends AppData = AppData,
-> extends Transport<
-	DirectTransportAppData,
-	DirectTransportEvents,
-	DirectTransportObserver
-> {
+export class DirectTransportImpl<
+		DirectTransportAppData extends AppData = AppData,
+	>
+	extends TransportImpl<
+		DirectTransportAppData,
+		DirectTransportEvents,
+		DirectTransportObserver
+	>
+	implements Transport, DirectTransport
+{
 	// DirectTransport data.
 	// eslint-disable-next-line no-unused-private-class-members
 	readonly #data: DirectTransportData;
 
-	/**
-	 * @private
-	 */
 	constructor(
 		options: DirectTransportConstructorOptions<DirectTransportAppData>
 	) {
@@ -92,22 +65,17 @@ export class DirectTransport<
 		};
 
 		this.handleWorkerNotifications();
+		this.handleListenerError();
 	}
 
-	/**
-	 * Observer.
-	 *
-	 * @override
-	 */
+	get type(): 'direct' {
+		return 'direct';
+	}
+
 	get observer(): DirectTransportObserver {
 		return super.observer;
 	}
 
-	/**
-	 * Close the DirectTransport.
-	 *
-	 * @override
-	 */
 	close(): void {
 		if (this.closed) {
 			return;
@@ -116,12 +84,6 @@ export class DirectTransport<
 		super.close();
 	}
 
-	/**
-	 * Router was closed.
-	 *
-	 * @private
-	 * @override
-	 */
 	routerClosed(): void {
 		if (this.closed) {
 			return;
@@ -130,9 +92,6 @@ export class DirectTransport<
 		super.routerClosed();
 	}
 
-	/**
-	 * Dump Transport.
-	 */
 	async dump(): Promise<DirectTransportDump> {
 		logger.debug('dump()');
 
@@ -151,11 +110,6 @@ export class DirectTransport<
 		return parseDirectTransportDumpResponse(data);
 	}
 
-	/**
-	 * Get DirectTransport stats.
-	 *
-	 * @override
-	 */
 	async getStats(): Promise<DirectTransportStat[]> {
 		logger.debug('getStats()');
 
@@ -174,19 +128,11 @@ export class DirectTransport<
 		return [parseGetStatsResponse(data)];
 	}
 
-	/**
-	 * NO-OP method in DirectTransport.
-	 *
-	 * @override
-	 */
 	// eslint-disable-next-line @typescript-eslint/require-await
 	async connect(): Promise<void> {
 		logger.debug('connect()');
 	}
 
-	/**
-	 * @override
-	 */
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
 	async setMaxIncomingBitrate(bitrate: number): Promise<void> {
 		throw new UnsupportedError(
@@ -194,9 +140,6 @@ export class DirectTransport<
 		);
 	}
 
-	/**
-	 * @override
-	 */
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
 	async setMaxOutgoingBitrate(bitrate: number): Promise<void> {
 		throw new UnsupportedError(
@@ -204,9 +147,6 @@ export class DirectTransport<
 		);
 	}
 
-	/**
-	 * @override
-	 */
 	// eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/require-await
 	async setMinOutgoingBitrate(bitrate: number): Promise<void> {
 		throw new UnsupportedError(
@@ -214,10 +154,7 @@ export class DirectTransport<
 		);
 	}
 
-	/**
-	 * Send RTCP packet.
-	 */
-	sendRtcp(rtcpPacket: Buffer) {
+	sendRtcp(rtcpPacket: Buffer): void {
 		if (!Buffer.isBuffer(rtcpPacket)) {
 			throw new TypeError('rtcpPacket must be a Buffer');
 		}
@@ -281,6 +218,15 @@ export class DirectTransport<
 				}
 			}
 		);
+	}
+
+	private handleListenerError(): void {
+		this.on('listenererror', (eventName, error) => {
+			logger.error(
+				`event listener threw an error [eventName:${eventName}]:`,
+				error
+			);
+		});
 	}
 }
 

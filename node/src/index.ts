@@ -1,11 +1,11 @@
 import { Logger, LoggerEmitter } from './Logger';
 import { EnhancedEventEmitter } from './enhancedEvents';
-import { workerBin, Worker, WorkerSettings } from './Worker';
-import * as utils from './utils';
+import type { Worker, WorkerSettings } from './WorkerTypes';
+import { WorkerImpl, workerBin } from './Worker';
 import { supportedRtpCapabilities } from './supportedRtpCapabilities';
-import { RtpCapabilities } from './RtpParameters';
-
-import * as types from './types';
+import type { RtpCapabilities } from './rtpParametersTypes';
+import type * as types from './types';
+import * as utils from './utils';
 
 /**
  * Expose all types.
@@ -17,11 +17,6 @@ export { types };
  */
 // eslint-disable-next-line @typescript-eslint/no-require-imports
 export const version: string = require('../../package.json').version;
-
-/**
- * Expose parseScalabilityMode() function.
- */
-export { parse as parseScalabilityMode } from './scalabilityModes';
 
 export type Observer = EnhancedEventEmitter<ObserverEvents>;
 
@@ -44,15 +39,6 @@ export { workerBin };
 const logger = new Logger();
 
 /**
- * Event listeners for mediasoup generated logs.
- */
-export type LogEventListeners = {
-	ondebug?: (namespace: string, log: string) => void;
-	onwarn?: (namespace: string, log: string) => void;
-	onerror?: (namespace: string, log: string, error?: Error) => void;
-};
-
-/**
  * Set event listeners for mediasoup generated logs. If called with no arguments
  * then no events will be emitted.
  *
@@ -73,7 +59,9 @@ export type LogEventListeners = {
  * });
  * ```
  */
-export function setLogEventListeners(listeners?: LogEventListeners): void {
+export function setLogEventListeners(
+	listeners?: types.LogEventListeners
+): void {
 	logger.debug('setLogEventListeners()');
 
 	let debugLogEmitter: LoggerEmitter | undefined;
@@ -123,7 +111,7 @@ export async function createWorker<
 		throw new TypeError('if given, appData must be an object');
 	}
 
-	const worker: Worker<WorkerAppData> = new Worker({
+	const worker: Worker<WorkerAppData> = new WorkerImpl({
 		logLevel,
 		logTags,
 		rtcMinPort,
@@ -153,3 +141,8 @@ export async function createWorker<
 export function getSupportedRtpCapabilities(): RtpCapabilities {
 	return utils.clone<RtpCapabilities>(supportedRtpCapabilities);
 }
+
+/**
+ * Expose parseScalabilityMode() function.
+ */
+export { parseScalabilityMode } from './scalabilityModesUtils';

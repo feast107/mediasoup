@@ -90,6 +90,7 @@ const config = tsEslint.config(
 				2,
 				{ vars: 'all', args: 'after-used', caughtErrors: 'none' },
 			],
+			'no-unused-private-class-members': 2,
 			'no-use-before-define': 0,
 			'no-useless-call': 2,
 			'no-useless-computed-key': 2,
@@ -127,6 +128,7 @@ const config = tsEslint.config(
 			},
 		},
 		rules: {
+			'@typescript-eslint/class-literal-property-style': [2, 'getters'],
 			'@typescript-eslint/consistent-generic-constructors': [
 				2,
 				'type-annotation',
@@ -145,6 +147,7 @@ const config = tsEslint.config(
 			'@typescript-eslint/consistent-type-definitions': 0,
 			// Sorry, we need many `any` usage.
 			'@typescript-eslint/no-explicit-any': 0,
+			'@typescript-eslint/explicit-function-return-type': 2,
 			'@typescript-eslint/no-unsafe-member-access': 0,
 			'@typescript-eslint/no-unsafe-assignment': 0,
 			'@typescript-eslint/no-unsafe-call': 0,

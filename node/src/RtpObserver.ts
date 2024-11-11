@@ -1,30 +1,16 @@
 import { Logger } from './Logger';
 import { EnhancedEventEmitter } from './enhancedEvents';
-import { Channel } from './Channel';
-import { RouterInternal } from './Router';
-import { Producer } from './Producer';
-import { AppData } from './types';
+import type {
+	RtpObserverEvents,
+	RtpObserverObserver,
+} from './RtpObserverTypes';
+import type { Channel } from './Channel';
+import type { RouterInternal } from './Router';
+import type { Producer } from './ProducerTypes';
+import type { AppData } from './types';
 import * as FbsRequest from './fbs/request';
 import * as FbsRouter from './fbs/router';
 import * as FbsRtpObserver from './fbs/rtp-observer';
-
-export type RtpObserverEvents = {
-	routerclose: [];
-	listenererror: [string, Error];
-	// Private events.
-	'@close': [];
-};
-
-export type RtpObserverObserver =
-	EnhancedEventEmitter<RtpObserverObserverEvents>;
-
-export type RtpObserverObserverEvents = {
-	close: [];
-	pause: [];
-	resume: [];
-	addproducer: [Producer];
-	removeproducer: [Producer];
-};
 
 export type RtpObserverConstructorOptions<RtpObserverAppData> = {
 	internal: RtpObserverObserverInternal;
@@ -33,20 +19,13 @@ export type RtpObserverConstructorOptions<RtpObserverAppData> = {
 	getProducerById: (producerId: string) => Producer | undefined;
 };
 
-export type RtpObserverObserverInternal = RouterInternal & {
+type RtpObserverObserverInternal = RouterInternal & {
 	rtpObserverId: string;
 };
 
 const logger = new Logger('RtpObserver');
 
-export type RtpObserverAddRemoveProducerOptions = {
-	/**
-	 * The id of the Producer to be added or removed.
-	 */
-	producerId: string;
-};
-
-export abstract class RtpObserver<
+export abstract class RtpObserverImpl<
 	RtpObserverAppData extends AppData = AppData,
 	Events extends RtpObserverEvents = RtpObserverEvents,
 	Observer extends RtpObserverObserver = RtpObserverObserver,
@@ -74,10 +53,6 @@ export abstract class RtpObserver<
 	// Observer instance.
 	readonly #observer: Observer;
 
-	/**
-	 * @private
-	 * @interface
-	 */
 	constructor(
 		{
 			internal,
@@ -98,51 +73,30 @@ export abstract class RtpObserver<
 		this.#observer = observer;
 	}
 
-	/**
-	 * RtpObserver id.
-	 */
 	get id(): string {
 		return this.internal.rtpObserverId;
 	}
 
-	/**
-	 * Whether the RtpObserver is closed.
-	 */
 	get closed(): boolean {
 		return this.#closed;
 	}
 
-	/**
-	 * Whether the RtpObserver is paused.
-	 */
 	get paused(): boolean {
 		return this.#paused;
 	}
 
-	/**
-	 * App custom data.
-	 */
 	get appData(): RtpObserverAppData {
 		return this.#appData;
 	}
 
-	/**
-	 * App custom data setter.
-	 */
 	set appData(appData: RtpObserverAppData) {
 		this.#appData = appData;
 	}
 
-	/**
-	 * Observer.
-	 */
 	get observer(): Observer {
 		return this.#observer;
 	}
 
-	/**
-	 * Close the RtpObserver.
-	 */
 	close(): void {
 		if (this.#closed) {
 			return;
@@ -175,11 +129,6 @@ export abstract class RtpObserver<
 		this.#observer.safeEmit('close');
 	}
 
-	/**
-	 * Router was closed.
-	 *
-	 * @private
-	 */
 	routerClosed(): void {
 		if (this.#closed) {
 			return;
@@ -198,9 +147,6 @@ export abstract class RtpObserver<
 		this.#observer.safeEmit('close');
 	}
 
-	/**
-	 * Pause the RtpObserver.
-	 */
 	async pause(): Promise<void> {
 		logger.debug('pause()');
 
@@ -221,9 +167,6 @@ export abstract class RtpObserver<
 		}
 	}
 
-	/**
-	 * Resume the RtpObserver.
-	 */
 	async resume(): Promise<void> {
 		logger.debug('resume()');
 
@@ -244,12 +187,7 @@ export abstract class RtpObserver<
 		}
 	}
 
-	/**
-	 * Add a Producer to the RtpObserver.
-	 */
-	async addProducer({
-		producerId,
-	}: RtpObserverAddRemoveProducerOptions): Promise<void> {
+	async addProducer({ producerId }: { producerId: string }): Promise<void> {
 		logger.debug('addProducer()');
 
 		const producer = this.getProducerById(producerId);
@@ -273,12 +211,7 @@ export abstract class RtpObserver<
 		this.#observer.safeEmit('addproducer', producer);
 	}
 
-	/**
-	 * Remove a Producer from the RtpObserver.
-	 */
-	async removeProducer({
-		producerId,
-	}: RtpObserverAddRemoveProducerOptions): Promise<void> {
+	async removeProducer({ producerId }: { producerId: string }): Promise<void> {
 		logger.debug('removeProducer()');
 
 		const producer = this.getProducerById(producerId);

@@ -1,7 +1,7 @@
 import { pickPort } from 'pick-port';
 import * as mediasoup from '../';
 import { enhancedOnce } from '../enhancedEvents';
-import {
+import type {
 	WorkerEvents,
 	ConsumerEvents,
 	ProducerObserverEvents,
@@ -523,6 +523,8 @@ test('router.createPipeTransport() with enableRtx succeeds', async () => {
 		},
 		enableRtx: true,
 	});
+
+	expect(pipeTransport.type).toBe('pipe');
 
 	const pipeConsumer = await pipeTransport.consume({
 		producerId: ctx.videoProducer!.id,
@@ -1081,7 +1083,7 @@ test('router.pipeToRouter() called in two Routers passing one to each other as a
 	const pipeTransportsB = new Map();
 
 	routerA.observer.on('newtransport', transport => {
-		if (transport.constructor.name !== 'PipeTransport') {
+		if (transport.constructor.name !== 'PipeTransportImpl') {
 			return;
 		}
 
@@ -1090,7 +1092,7 @@ test('router.pipeToRouter() called in two Routers passing one to each other as a
 	});
 
 	routerB.observer.on('newtransport', transport => {
-		if (transport.constructor.name !== 'PipeTransport') {
+		if (transport.constructor.name !== 'PipeTransportImpl') {
 			return;
 		}
 

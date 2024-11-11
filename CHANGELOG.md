@@ -2,6 +2,12 @@
 
 ### NEXT
 
+### 3.15.0
+
+- Node: Add TypeScript interfaces for all exported classes ([PR #1463](https://github.com/versatica/mediasoup/pull/1463)).
+- Node: Add new `transport.type` getter than returns `'webrtc' | 'plain' | 'pipe' | 'direct'` ([PR #1463](https://github.com/versatica/mediasoup/pull/1463)).
+- Node: Add new `rtpObserver.type` getter than returns `'activespeaker' | 'audiolevel'` ([PR #1463](https://github.com/versatica/mediasoup/pull/1463)).
+
 ### 3.14.16
 
 - `SimulcastConsumer`: Fix cannot switch layers if initial `tsReferenceSpatialLayer disappears` disappears ([PR #1459](https://github.com/versatica/mediasoup/pull/1459) by @Lynnworld).

@@ -1,7 +1,8 @@
 import * as flatbuffers from 'flatbuffers';
 import * as mediasoup from '../';
 import { enhancedOnce } from '../enhancedEvents';
-import { WorkerEvents, ProducerEvents } from '../types';
+import type { WorkerEvents, ProducerEvents } from '../types';
+import type { ProducerImpl } from '../Producer';
 import { UnsupportedError } from '../errors';
 import * as utils from '../utils';
 import {
@@ -680,7 +681,7 @@ test('producer.enableTraceEvent() succeed', async () => {
 
 	expect(dump1.traceEventTypes).toEqual(expect.arrayContaining(['rtp', 'pli']));
 
-	await audioProducer.enableTraceEvent([]);
+	await audioProducer.enableTraceEvent();
 
 	const dump2 = await audioProducer.dump();
 
@@ -726,8 +727,8 @@ test('Producer emits "score"', async () => {
 		ctx.videoProducerOptions
 	);
 
-	// Private API.
-	const channel = videoProducer.channelForTesting;
+	// API not exposed in the interface.
+	const channel = (videoProducer as ProducerImpl).channelForTesting;
 	const onScore = jest.fn();
 
 	videoProducer.on('score', onScore);
