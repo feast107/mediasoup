@@ -2,6 +2,14 @@
 
 ### NEXT
 
+### 3.15.2
+
+- `Worker`: Fix crash when using colliding `portRange` values in different transports ([PR #1469](https://github.com/versatica/mediasoup/pull/1469)).
+
+### 3.15.1
+
+- Expose `extras` namespace which exports `EnhancedEventEmitter` and `enhancedOnce()` for now ([PR #1464](https://github.com/versatica/mediasoup/pull/1464)).
+
 ### 3.15.0
 
 - Node: Add TypeScript interfaces for all exported classes ([PR #1463](https://github.com/versatica/mediasoup/pull/1463)).
