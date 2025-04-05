@@ -434,6 +434,8 @@ pub enum ConsumerStats {
     JustConsumer((ConsumerStat,)),
     /// RTC statistics with producer
     WithProducer((ConsumerStat, ProducerStat)),
+    /// RTC statistics with multiple consumers (pipe).
+    MultipleConsumers(Vec<ConsumerStat>),
 }
 
 impl ConsumerStats {
@@ -442,6 +444,7 @@ impl ConsumerStats {
         match self {
             ConsumerStats::JustConsumer((consumer_stat,)) => consumer_stat,
             ConsumerStats::WithProducer((consumer_stat, _)) => consumer_stat,
+            ConsumerStats::MultipleConsumers(consumer_stats) => &consumer_stats[0],
         }
     }
 }
@@ -1030,18 +1033,31 @@ impl Consumer {
             .await?;
 
         if let response::Body::ConsumerGetStatsResponse(data) = response {
-            match data.stats.len() {
-                0 => panic!("Empty stats response from worker"),
-                1 => {
-                    let consumer_stat = ConsumerStat::from_fbs(&data.stats[0]);
+            match self.r#type() {
+                ConsumerType::Simple | ConsumerType::Simulcast | ConsumerType::Svc => {
+                    match data.stats.len() {
+                        0 => panic!("Empty stats response from worker"),
+                        1 => {
+                            let consumer_stat = ConsumerStat::from_fbs(&data.stats[0]);
 
-                    Ok(ConsumerStats::JustConsumer((consumer_stat,)))
+                            Ok(ConsumerStats::JustConsumer((consumer_stat,)))
+                        }
+                        2 => {
+                            let consumer_stat = ConsumerStat::from_fbs(&data.stats[0]);
+                            let producer_stat = ProducerStat::from_fbs(&data.stats[1]);
+
+                            Ok(ConsumerStats::WithProducer((consumer_stat, producer_stat)))
+                        }
+                        _ => panic!("More than two stats response from worker"),
+                    }
                 }
-                _ => {
-                    let consumer_stat = ConsumerStat::from_fbs(&data.stats[0]);
-                    let producer_stat = ProducerStat::from_fbs(&data.stats[1]);
+                ConsumerType::Pipe => {
+                    let mut stats = Vec::<ConsumerStat>::with_capacity(data.stats.len());
+                    for stat in data.stats {
+                        stats.push(ConsumerStat::from_fbs(&stat));
+                    }
 
-                    Ok(ConsumerStats::WithProducer((consumer_stat, producer_stat)))
+                    Ok(ConsumerStats::MultipleConsumers(stats))
                 }
             }
         } else {

@@ -16,12 +16,6 @@
 
 namespace RTC
 {
-	// Max MTU size.
-	constexpr size_t MtuSize{ 1500u };
-	// MID header extension max length (just used when setting/updating MID
-	// extension).
-	constexpr uint8_t MidMaxLength{ 8u };
-
 	class RtpPacket
 	{
 	public:

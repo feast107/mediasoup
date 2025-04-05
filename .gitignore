@@ -37,3 +37,6 @@
 .idea
 # Packaged module.
 *.tgz
+
+## Text editors' config files.
+/.zed

@@ -2,8 +2,11 @@
 // #define MS_LOG_DEV_LEVEL 3
 
 #include "RTC/RtpPacket.hpp"
+#ifdef MS_RTC_LOGGER_RTP
 #include "DepLibUV.hpp"
+#endif
 #include "Logger.hpp"
+#include "RTC/Consts.hpp"
 #include <cstring>  // std::memcpy(), std::memmove(), std::memset()
 #include <iterator> // std::ostream_iterator
 #include <sstream>  // std::ostringstream
@@ -580,13 +583,13 @@ namespace RTC
 
 		const size_t midLen = mid.length();
 
-		// Here we assume that there is MidMaxLength available bytes, even if now
-		// they are padding bytes.
-		if (midLen > RTC::MidMaxLength)
+		// Here we assume that there is MidRtpExtensionMaxLength available bytes,
+		// even if now they are padding bytes.
+		if (midLen > RTC::Consts::MidRtpExtensionMaxLength)
 		{
 			MS_ERROR(
 			  "no enough space for MID value [MidMaxLength:%" PRIu8 ", mid:'%s']",
-			  RTC::MidMaxLength,
+			  RTC::Consts::MidRtpExtensionMaxLength,
 			  mid.c_str());
 
 			return;
@@ -692,7 +695,7 @@ namespace RTC
 	{
 		MS_TRACE();
 
-		auto* buffer = new uint8_t[MtuSize + 100];
+		auto* buffer = new uint8_t[RTC::Consts::MtuSize + 100];
 		auto* ptr    = const_cast<uint8_t*>(buffer);
 
 		size_t numBytes{ 0 };

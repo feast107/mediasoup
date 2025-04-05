@@ -48,7 +48,7 @@ namespace RTC
 
 			if (this->preferredSpatialLayer > encoding.spatialLayers - 1)
 			{
-				this->preferredSpatialLayer = encoding.spatialLayers - 1;
+				this->preferredSpatialLayer = static_cast<int16_t>(encoding.spatialLayers - 1);
 			}
 
 			if (flatbuffers::IsFieldPresent(
@@ -56,20 +56,20 @@ namespace RTC
 			{
 				if (this->preferredTemporalLayer > encoding.temporalLayers - 1)
 				{
-					this->preferredTemporalLayer = encoding.temporalLayers - 1;
+					this->preferredTemporalLayer = static_cast<int16_t>(encoding.temporalLayers - 1);
 				}
 			}
 			else
 			{
-				this->preferredTemporalLayer = encoding.temporalLayers - 1;
+				this->preferredTemporalLayer = static_cast<int16_t>(encoding.temporalLayers - 1);
 			}
 		}
 		else
 		{
 			// Initially set preferredSpatialLayer and preferredTemporalLayer to the
 			// maximum value.
-			this->preferredSpatialLayer  = encoding.spatialLayers - 1;
-			this->preferredTemporalLayer = encoding.temporalLayers - 1;
+			this->preferredSpatialLayer  = static_cast<int16_t>(encoding.spatialLayers - 1);
+			this->preferredTemporalLayer = static_cast<int16_t>(encoding.temporalLayers - 1);
 		}
 
 		// Create the encoding context.
@@ -223,7 +223,7 @@ namespace RTC
 
 				if (this->preferredSpatialLayer > this->rtpStream->GetSpatialLayers() - 1)
 				{
-					this->preferredSpatialLayer = this->rtpStream->GetSpatialLayers() - 1;
+					this->preferredSpatialLayer = static_cast<int16_t>(this->rtpStream->GetSpatialLayers() - 1);
 				}
 
 				// preferredTemporaLayer is optional.
@@ -233,7 +233,8 @@ namespace RTC
 
 					if (this->preferredTemporalLayer > this->rtpStream->GetTemporalLayers() - 1)
 					{
-						this->preferredTemporalLayer = this->rtpStream->GetTemporalLayers() - 1;
+						this->preferredTemporalLayer =
+						  static_cast<int16_t>(this->rtpStream->GetTemporalLayers() - 1);
 					}
 				}
 				else
@@ -645,6 +646,8 @@ namespace RTC
 			packet->logger.Dropped(RtcLogger::RtpPacket::DropReason::CONSUMER_INACTIVE);
 #endif
 
+			this->rtpSeqManager->Drop(packet->GetSequenceNumber());
+
 			return;
 		}
 
@@ -658,6 +661,8 @@ namespace RTC
 #ifdef MS_RTC_LOGGER_RTP
 			packet->logger.Dropped(RtcLogger::RtpPacket::DropReason::INVALID_TARGET_LAYER);
 #endif
+
+			this->rtpSeqManager->Drop(packet->GetSequenceNumber());
 
 			return;
 		}
@@ -674,6 +679,8 @@ namespace RTC
 			packet->logger.Dropped(RtcLogger::RtpPacket::DropReason::UNSUPPORTED_PAYLOAD_TYPE);
 #endif
 
+			this->rtpSeqManager->Drop(packet->GetSequenceNumber());
+
 			return;
 		}
 
@@ -684,17 +691,19 @@ namespace RTC
 			packet->logger.Dropped(RtcLogger::RtpPacket::DropReason::NOT_A_KEYFRAME);
 #endif
 
+			this->rtpSeqManager->Drop(packet->GetSequenceNumber());
+
 			return;
 		}
 
 		// Packets with only padding are not forwarded.
 		if (packet->GetPayloadLength() == 0)
 		{
-			this->rtpSeqManager->Drop(packet->GetSequenceNumber());
-
 #ifdef MS_RTC_LOGGER_RTP
 			packet->logger.Dropped(RtcLogger::RtpPacket::DropReason::EMPTY_PAYLOAD);
 #endif
+
+			this->rtpSeqManager->Drop(packet->GetSequenceNumber());
 
 			return;
 		}
@@ -1173,7 +1182,7 @@ namespace RTC
 			}
 			else if (newTargetSpatialLayer < this->preferredSpatialLayer)
 			{
-				newTargetTemporalLayer = this->rtpStream->GetTemporalLayers() - 1;
+				newTargetTemporalLayer = static_cast<int16_t>(this->rtpStream->GetTemporalLayers() - 1);
 			}
 			else
 			{

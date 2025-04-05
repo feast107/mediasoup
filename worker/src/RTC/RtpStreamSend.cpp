@@ -7,6 +7,7 @@
 #endif
 #include "Logger.hpp"
 #include "Utils.hpp"
+#include "RTC/Consts.hpp"
 #include "RTC/RtpDictionaries.hpp"
 
 namespace RTC
@@ -374,7 +375,7 @@ namespace RTC
 	{
 		MS_TRACE();
 
-		if (packet->GetSize() > RTC::MtuSize)
+		if (packet->GetSize() > RTC::Consts::MtuSize)
 		{
 			MS_WARN_TAG(
 			  rtp,
@@ -471,7 +472,7 @@ namespace RTC
 					MS_DEBUG_TAG(
 					  rtx,
 					  "ignoring retransmission for a packet already resent in the last RTT ms "
-					  "[seq:%" PRIu16 ", rtt:%" PRIu32 "]",
+					  "[seq:%" PRIu16 ", rtt:%" PRIu16 "]",
 					  packet->GetSequenceNumber(),
 					  rtt);
 				}

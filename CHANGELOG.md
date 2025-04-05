@@ -2,6 +2,30 @@
 
 ### NEXT
 
+### 3.15.7
+
+- CI: Remove redundant hosts `macos-14` and `windows-2022` from `mediasoup-worker-prebuild` job ([PR #1506](https://github.com/versatica/mediasoup/pull/1506)).
+- Node: Modernize code ([PR #1513](https://github.com/versatica/mediasoup/pull/1513)).
+- Fix wrong SCTP stream parameters in SCTP `DataConsumer` that consumes from a direct `DataProducer` ([PR #1516](https://github.com/versatica/mediasoup/pull/1516)).
+
+### 3.15.6
+
+- CI: Remove deprecated `ubuntu-20.04` host and add `windows-2025`, `ubuntu-22.04-arm` and `ubuntu-24.04-arm` hosts ([PR #1500](https://github.com/versatica/mediasoup/pull/1500)).
+
+### 3.15.5
+
+- `Consumer`: Fix sequence number gap ([PR #1494](https://github.com/versatica/mediasoup/pull/1494)).
+- Fix VP9 out of order packets forwarding ([PR #1486](https://github.com/versatica/mediasoup/pull/1486) by @vpalmisano).
+
+### 3.15.4
+
+- `Worker`: Drop VP8 packets with a higher temporal layer than the current one ([PR #1009](https://github.com/versatica/mediasoup/pull/1009)).
+- Fix the problem of the TCC package being omitted from being sent ([PR #1492](https://github.com/versatica/mediasoup/pull/1492) by @penguinol).
+
+### 3.15.3
+
+- Node: Expose `Index` interface in `types.indexTypes` or via `import { Index as MediasoupIndex } from 'mediasoup/lib/indexTypes'` ([PR #1485](https://github.com/versatica/mediasoup/pull/1485)).
+
 ### 3.15.2
 
 - `Worker`: Fix crash when using colliding `portRange` values in different transports ([PR #1469](https://github.com/versatica/mediasoup/pull/1469)).

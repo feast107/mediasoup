@@ -30,6 +30,13 @@ namespace Channel
 
 	/* Instance methods. */
 
+#ifdef MS_TEST
+	ChannelSocket::ChannelSocket()
+	{
+		MS_TRACE_STD();
+	}
+#endif
+
 	ChannelSocket::ChannelSocket(int consumerFd, int producerFd)
 	  : consumerSocket(new ConsumerSocket(consumerFd, MessageMaxLen, this)),
 	    producerSocket(new ProducerSocket(producerFd, MessageMaxLen))
@@ -256,7 +263,7 @@ namespace Channel
 		{
 			this->channelWriteFn(payload, payloadLen, this->channelWriteCtx);
 		}
-		else
+		else if (this->producerSocket)
 		{
 			this->producerSocket->Write(payload, payloadLen);
 		}

@@ -76,23 +76,23 @@ test('directTransport.getStats() succeeds', async () => {
 
 	expect(Array.isArray(stats)).toBe(true);
 	expect(stats.length).toBe(1);
-	expect(stats[0].type).toBe('direct-transport');
-	expect(stats[0].transportId).toBe(directTransport.id);
-	expect(typeof stats[0].timestamp).toBe('number');
-	expect(stats[0].bytesReceived).toBe(0);
-	expect(stats[0].recvBitrate).toBe(0);
-	expect(stats[0].bytesSent).toBe(0);
-	expect(stats[0].sendBitrate).toBe(0);
-	expect(stats[0].rtpBytesReceived).toBe(0);
-	expect(stats[0].rtpRecvBitrate).toBe(0);
-	expect(stats[0].rtpBytesSent).toBe(0);
-	expect(stats[0].rtpSendBitrate).toBe(0);
-	expect(stats[0].rtxBytesReceived).toBe(0);
-	expect(stats[0].rtxRecvBitrate).toBe(0);
-	expect(stats[0].rtxBytesSent).toBe(0);
-	expect(stats[0].rtxSendBitrate).toBe(0);
-	expect(stats[0].probationBytesSent).toBe(0);
-	expect(stats[0].probationSendBitrate).toBe(0);
+	expect(stats[0]!.type).toBe('direct-transport');
+	expect(stats[0]!.transportId).toBe(directTransport.id);
+	expect(typeof stats[0]!.timestamp).toBe('number');
+	expect(stats[0]!.bytesReceived).toBe(0);
+	expect(stats[0]!.recvBitrate).toBe(0);
+	expect(stats[0]!.bytesSent).toBe(0);
+	expect(stats[0]!.sendBitrate).toBe(0);
+	expect(stats[0]!.rtpBytesReceived).toBe(0);
+	expect(stats[0]!.rtpRecvBitrate).toBe(0);
+	expect(stats[0]!.rtpBytesSent).toBe(0);
+	expect(stats[0]!.rtpSendBitrate).toBe(0);
+	expect(stats[0]!.rtxBytesReceived).toBe(0);
+	expect(stats[0]!.rtxRecvBitrate).toBe(0);
+	expect(stats[0]!.rtxBytesSent).toBe(0);
+	expect(stats[0]!.rtxSendBitrate).toBe(0);
+	expect(stats[0]!.probationBytesSent).toBe(0);
+	expect(stats[0]!.probationSendBitrate).toBe(0);
 }, 2000);
 
 test('directTransport.connect() succeeds', async () => {
@@ -141,18 +141,20 @@ test('dataProducer.send() succeeds', async () => {
 			await dataConsumer.resume();
 		}
 
+		let messageSize: number;
+
 		// Send string (WebRTC DataChannel string).
 		if (id < numMessages / 2) {
 			message = String(id);
+			messageSize = Buffer.from(message).byteLength;
 		}
 		// Send string (WebRTC DataChannel binary).
 		else {
 			message = Buffer.from(String(id));
+			messageSize = message.byteLength;
 		}
 
 		dataProducer.send(message);
-
-		const messageSize = Buffer.from(message).byteLength;
 
 		sentMessageBytes += messageSize;
 

@@ -1,6 +1,10 @@
 name: mediasoup-rust
 
-on: [pull_request, workflow_dispatch]
+on:
+  push:
+    branches: [v3]
+  pull_request:
+  workflow_dispatch:
 
 concurrency:
   # Cancel a currently running workflow from the same PR, branch or tag when a
@@ -16,13 +20,15 @@ jobs:
     strategy:
       matrix:
         build:
-          - os: ubuntu-20.04
           - os: ubuntu-22.04
+          - os: ubuntu-22.04-arm
           - os: ubuntu-24.04
+          - os: ubuntu-24.04-arm
           - os: macos-13
           - os: macos-14
           - os: macos-15
           - os: windows-2022
+          - os: windows-2025
 
     runs-on: ${{ matrix.build.os }}
 

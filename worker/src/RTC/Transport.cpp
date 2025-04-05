@@ -11,11 +11,11 @@
 #include "Utils.hpp"
 #include "FBS/transport.h"
 #include "RTC/BweType.hpp"
+#include "RTC/Consts.hpp"
 #include "RTC/PipeConsumer.hpp"
 #include "RTC/RTCP/FeedbackPs.hpp"
 #include "RTC/RTCP/FeedbackPsAfb.hpp"
 #include "RTC/RTCP/FeedbackPsRemb.hpp"
-#include "RTC/RTCP/FeedbackRtp.hpp"
 #include "RTC/RTCP/FeedbackRtpNack.hpp"
 #include "RTC/RTCP/FeedbackRtpTransport.hpp"
 #include "RTC/RTCP/XrDelaySinceLastRr.hpp"
@@ -758,8 +758,8 @@ namespace RTC
 
 					if (createTccServer)
 					{
-						this->tccServer =
-						  std::make_shared<RTC::TransportCongestionControlServer>(this, bweType, RTC::MtuSize);
+						this->tccServer = std::make_shared<RTC::TransportCongestionControlServer>(
+						  this, bweType, RTC::Consts::RtcpPacketMaxSize);
 
 						if (this->maxIncomingBitrate != 0u)
 						{
